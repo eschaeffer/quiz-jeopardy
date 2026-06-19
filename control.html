@@ -77,6 +77,45 @@
                 </div>
             </div>
 
+            <div id="dd-control" class="hidden">
+                <div id="ctrl-dd-title">DAILY DOUBLE</div>
+                <div id="ctrl-dd-team-selection">
+                    <h3>Who found the Daily Double?</h3>
+                    <div id="ctrl-dd-team-buttons"></div>
+                </div>
+                <div id="ctrl-dd-wager-section" class="hidden">
+                    <h3><span id="ctrl-dd-team-name"></span> — <span id="ctrl-dd-team-score"></span></h3>
+                    <div class="ctrl-dd-wager-control">
+                        <label for="ctrl-dd-wager-slider">Wager:</label>
+                        <div id="ctrl-dd-wager-display">$0</div>
+                        <input type="range" id="ctrl-dd-wager-slider" min="0" max="1000" step="1" value="0">
+                        <button id="ctrl-dd-wager-confirm-btn" class="ctrl-btn">Lock In Wager</button>
+                    </div>
+                </div>
+                <div id="ctrl-dd-question-section" class="hidden">
+                    <div id="ctrl-dd-wagering-team"></div>
+                    <div id="ctrl-dd-question-category"></div>
+                    <div id="ctrl-dd-question-value"></div>
+                    <div id="ctrl-dd-question-text"></div>
+                    <div id="ctrl-dd-timer-display" class="hidden">
+                        <div id="ctrl-dd-timer-bar"></div>
+                        <span id="ctrl-dd-timer-text">30</span>
+                    </div>
+                    <div class="control-actions">
+                        <button id="ctrl-dd-reveal-btn" class="ctrl-btn">Reveal Answer</button>
+                        <button id="ctrl-dd-pause-btn" class="ctrl-btn">Pause Timer</button>
+                        <button id="ctrl-dd-continue-btn" class="ctrl-btn">Continue</button>
+                    </div>
+                    <div id="ctrl-dd-scoring" class="hidden">
+                        <h3>Score Response</h3>
+                        <div id="ctrl-dd-team-scoring"></div>
+                    </div>
+                    <div id="ctrl-dd-answer" class="hidden">
+                        <div id="ctrl-dd-answer-text"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="results-control" class="hidden">
                 <div id="control-winner"></div>
                 <div id="control-final-scores"></div>

@@ -25,6 +25,14 @@ const TeacherControl = (() => {
         finalClueRevealed: false,
         finalAnswerRevealed: false,
         finalScoringVisible: false,
+        isDailyDouble: false,
+        ddTeamSelection: false,
+        ddWagerPhase: false,
+        ddQuestionSection: false,
+        ddScoringVisible: false,
+        ddAnswerRevealed: false,
+        ddTeamIndex: null,
+        ddWager: 0,
         winner: '',
         finalScores: []
     };
@@ -75,11 +83,20 @@ const TeacherControl = (() => {
 
     function handleStateUpdate(data) {
         if (data.type === 'STATE_UPDATE') {
+            console.log('[control] STATE_UPDATE received:', data.state);
             const incoming = data.state;
             Object.assign(localState, incoming);
             if (incoming.usedTiles && Array.isArray(incoming.usedTiles)) {
                 localState.usedTiles = new Set(incoming.usedTiles);
             }
+            console.log('[control] localState after update:', {
+                phase: localState.phase,
+                roundIndex: localState.roundIndex,
+                roundsCount: localState.rounds?.length,
+                usedTilesCount: localState.usedTiles?.size,
+                usedTilesType: typeof localState.usedTiles,
+                isSet: localState.usedTiles instanceof Set
+            });
             renderControl();
         }
     }
@@ -106,7 +123,11 @@ const TeacherControl = (() => {
                 break;
             case 'question':
                 showScreen('control-screen');
-                renderQuestionControl();
+                if (s.isDailyDouble) {
+                    renderDailyDoubleControl();
+                } else {
+                    renderQuestionControl();
+                }
                 break;
             case 'final':
                 showScreen('control-screen');
@@ -121,6 +142,12 @@ const TeacherControl = (() => {
 
     function renderBoardControl() {
         const s = localState;
+        console.log('[control] renderBoardControl called:', {
+            hasRounds: !!s.rounds,
+            roundsLength: s.rounds?.length,
+            roundIndex: s.roundIndex,
+            currentRound: s.rounds?.[s.roundIndex]?.name
+        });
         $('#control-title').textContent = s.currentRound?.name || 'JEOPARDY!';
         renderControlScores();
 
@@ -244,6 +271,116 @@ const TeacherControl = (() => {
         $('#ctrl-pause-btn').disabled = !s.timerRunning;
     }
 
+    function renderDailyDoubleControl() {
+        const s = localState;
+        const q = s.currentQuestion;
+        if (!q) return;
+
+        renderControlScores();
+
+        $('#board-control').classList.add('hidden');
+        $('#question-control').classList.add('hidden');
+        $('#final-control').classList.add('hidden');
+        $('#results-control').classList.add('hidden');
+        $('#dd-control').classList.remove('hidden');
+
+        $('#ctrl-dd-title').textContent = 'DAILY DOUBLE';
+
+        if (s.ddTeamSelection) {
+            $('#ctrl-dd-team-selection').classList.remove('hidden');
+            $('#ctrl-dd-wager-section').classList.add('hidden');
+            $('#ctrl-dd-question-section').classList.add('hidden');
+
+            const btns = $('#ctrl-dd-team-buttons');
+            btns.innerHTML = s.teams.map((team, i) =>
+                `<button class="ctrl-dd-team-btn ctrl-btn" onclick="TeacherControl.ddSelectTeam(${i})">${team.name} ($${team.score.toLocaleString()})</button>`
+            ).join('');
+        } else if (s.ddWagerPhase) {
+            $('#ctrl-dd-team-selection').classList.add('hidden');
+            $('#ctrl-dd-wager-section').classList.remove('hidden');
+            $('#ctrl-dd-question-section').classList.add('hidden');
+
+            const team = s.teams[s.ddTeamIndex];
+            if (team) {
+                $('#ctrl-dd-team-name').textContent = team.name;
+                $('#ctrl-dd-team-score').textContent = `$${team.score.toLocaleString()}`;
+
+                const minWager = s.roundIndex === 0 ? 5 : 100;
+                const maxWager = team.score < minWager
+                    ? Math.max(...s.rounds[s.roundIndex].categories.flatMap(c => c.questions.map(q => q.value)))
+                    : team.score;
+
+                const slider = $('#ctrl-dd-wager-slider');
+                slider.min = minWager;
+                slider.max = maxWager;
+                slider.step = minWager;
+                slider.value = Math.min(team.score, maxWager);
+                $('#ctrl-dd-wager-display').textContent = `$${parseInt(slider.value).toLocaleString()}`;
+
+                slider.oninput = () => {
+                    $('#ctrl-dd-wager-display').textContent = `$${parseInt(slider.value).toLocaleString()}`;
+                };
+            }
+        } else if (s.ddQuestionSection) {
+            $('#ctrl-dd-team-selection').classList.add('hidden');
+            $('#ctrl-dd-wager-section').classList.add('hidden');
+            $('#ctrl-dd-question-section').classList.remove('hidden');
+
+            const team = s.teams[s.ddTeamIndex];
+            $('#ctrl-dd-wagering-team').textContent = team ? `${team.name} is wagering $${(s.ddWager || 0).toLocaleString()}` : '';
+            $('#ctrl-dd-question-category').textContent = q.category;
+            $('#ctrl-dd-question-value').textContent = `$${q.value}`;
+            $('#ctrl-dd-question-text').textContent = q.question;
+            $('#ctrl-dd-answer-text').textContent = `Answer: ${q.answer}`;
+
+            if (s.timerRunning || s.timerRemaining > 0) {
+                $('#ctrl-dd-timer-display').classList.remove('hidden');
+                const pct = (s.timerRemaining / s.timerDuration) * 100;
+                $('#ctrl-dd-timer-bar').style.width = `${pct}%`;
+                $('#ctrl-dd-timer-text').textContent = s.timerRemaining;
+                $('#ctrl-dd-timer-bar').classList.toggle('warning', pct < 30);
+            } else {
+                $('#ctrl-dd-timer-display').classList.add('hidden');
+            }
+
+            if (s.ddScoringVisible) {
+                $('#ctrl-dd-scoring').classList.remove('hidden');
+                renderDDTeamScoring();
+            } else {
+                $('#ctrl-dd-scoring').classList.add('hidden');
+            }
+
+            if (s.ddAnswerRevealed) {
+                $('#ctrl-dd-answer').classList.remove('hidden');
+                $('#ctrl-dd-reveal-btn').classList.add('hidden');
+                $('#ctrl-dd-continue-btn').classList.remove('hidden');
+            } else {
+                $('#ctrl-dd-answer').classList.add('hidden');
+                $('#ctrl-dd-reveal-btn').classList.remove('hidden');
+                $('#ctrl-dd-continue-btn').classList.add('hidden');
+            }
+
+            $('#ctrl-dd-pause-btn').textContent = s.timerRunning ? 'Pause Timer' : 'Timer Stopped';
+            $('#ctrl-dd-pause-btn').disabled = !s.timerRunning;
+        }
+    }
+
+    function renderDDTeamScoring() {
+        const container = $('#ctrl-dd-team-scoring');
+        const team = localState.teams[localState.ddTeamIndex];
+        if (!team) return;
+        container.innerHTML = `
+            <div class="ctrl-team-score">
+                <div class="name">${team.name}</div>
+                <div>Wagered: $${(localState.ddWager || 0).toLocaleString()}</div>
+                <div class="buttons">
+                    <button class="ctrl-score-btn correct" onclick="TeacherControl.scoreTeam(${localState.ddTeamIndex}, true, false)">Correct</button>
+                    <button class="ctrl-score-btn wrong" onclick="TeacherControl.scoreTeam(${localState.ddTeamIndex}, false, false)">Wrong</button>
+                </div>
+            </div>
+        `;
+    }
+
     function renderControlTeamScoring(isFinal) {
         const container = isFinal ? $('#control-final-team-scoring') : $('#control-team-scoring');
         const teams = localState.teams;
@@ -363,6 +500,19 @@ const TeacherControl = (() => {
         },
         playAgain() {
             sendCommand('PLAY_AGAIN');
+        },
+        ddSelectTeam(teamIndex) {
+            sendCommand('DD_SELECT_TEAM', { teamIndex });
+        },
+        ddConfirmWager() {
+            const wager = parseInt($('#ctrl-dd-wager-slider').value);
+            sendCommand('DD_CONFIRM_WAGER', { wager });
+        },
+        ddRevealAnswer() {
+            sendCommand('DD_REVEAL_ANSWER');
+        },
+        ddContinue() {
+            sendCommand('DD_CONTINUE');
         }
     };
 })();
@@ -396,5 +546,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('ctrl-play-again-btn').addEventListener('click', () => {
         TeacherControl.playAgain();
+    });
+
+    document.getElementById('ctrl-dd-wager-confirm-btn').addEventListener('click', () => {
+        TeacherControl.ddConfirmWager();
+    });
+
+    document.getElementById('ctrl-dd-reveal-btn').addEventListener('click', () => {
+        TeacherControl.ddRevealAnswer();
+    });
+
+    document.getElementById('ctrl-dd-pause-btn').addEventListener('click', () => {
+        TeacherControl.pauseTimer(false);
+    });
+
+    document.getElementById('ctrl-dd-continue-btn').addEventListener('click', () => {
+        TeacherControl.ddContinue();
     });
 });

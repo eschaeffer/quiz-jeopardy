@@ -648,6 +648,16 @@ body {
     text-align: center;
 }
 
+#buzzer-qr-link, #control-qr-link {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#buzzer-qr-link:hover, #control-qr-link:hover {
+    opacity: 0.85;
+}
+
 #control-qr-container {
     display: inline-block;
     padding: 0.5rem;

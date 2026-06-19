@@ -197,6 +197,14 @@ const JeopardyGame = (() => {
                 finalClueRevealed: !$('#final-clue-section').classList.contains('hidden'),
                 finalAnswerRevealed: !$('#final-answer-container').classList.contains('hidden'),
                 finalScoringVisible: !$('#final-scoring-section').classList.contains('hidden'),
+                isDailyDouble: gameState.isDailyDouble,
+                ddTeamSelection: !$('#dd-team-selection').classList.contains('hidden'),
+                ddWagerPhase: !$('#dd-wager-section').classList.contains('hidden'),
+                ddQuestionSection: !$('#dd-question-section').classList.contains('hidden'),
+                ddScoringVisible: !$('#dd-scoring-section').classList.contains('hidden'),
+                ddAnswerRevealed: !$('#dd-answer-container').classList.contains('hidden'),
+                ddTeamIndex: gameState.dailyDoubleTeamIndex,
+                ddWager: gameState.dailyDoubleWager,
                 winner: $('#winner-announcement')?.textContent || '',
                 finalScores: gameState.teams.map((t, i, arr) => {
                     const maxScore = Math.max(...arr.map(x => x.score));
@@ -256,8 +264,30 @@ const JeopardyGame = (() => {
             case 'SCORE_TEAM':
                 if (data.isFinal) {
                     scoreFinalTeam(data.teamIndex, data.isCorrect);
+                } else if (gameState.isDailyDouble) {
+                    scoreDailyDouble(data.isCorrect);
                 } else {
                     scoreTeam(data.teamIndex, data.isCorrect);
+                }
+                break;
+            case 'DD_SELECT_TEAM':
+                if (gameState.isDailyDouble) {
+                    selectDailyDoubleTeam(data.teamIndex);
+                }
+                break;
+            case 'DD_CONFIRM_WAGER':
+                if (gameState.isDailyDouble) {
+                    confirmDailyDoubleWager();
+                }
+                break;
+            case 'DD_REVEAL_ANSWER':
+                if (gameState.isDailyDouble) {
+                    revealDailyDoubleAnswer();
+                }
+                break;
+            case 'DD_CONTINUE':
+                if (gameState.isDailyDouble) {
+                    continueFromDailyDouble();
                 }
                 break;
             case 'PLAY_AGAIN':
@@ -324,6 +354,7 @@ const JeopardyGame = (() => {
                 correctLevel: QRCode.CorrectLevel.M
             });
             $('#qr-section').classList.remove('hidden');
+            $('#buzzer-qr-link').href = url;
         }
 
         const controlContainer = $('#control-qr-container');
@@ -339,6 +370,7 @@ const JeopardyGame = (() => {
                 correctLevel: QRCode.CorrectLevel.M
             });
             $('#control-qr-section').classList.remove('hidden');
+            $('#control-qr-link').href = controlUrl;
         }
     }
 
