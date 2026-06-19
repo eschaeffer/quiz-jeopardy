@@ -75,7 +75,11 @@ const TeacherControl = (() => {
 
     function handleStateUpdate(data) {
         if (data.type === 'STATE_UPDATE') {
-            Object.assign(localState, data.state);
+            const incoming = data.state;
+            Object.assign(localState, incoming);
+            if (incoming.usedTiles && Array.isArray(incoming.usedTiles)) {
+                localState.usedTiles = new Set(incoming.usedTiles);
+            }
             renderControl();
         }
     }
@@ -145,9 +149,13 @@ const TeacherControl = (() => {
                 const cat = round.categories[c];
                 if (q < cat.questions.length) {
                     const tileId = `${s.roundIndex}-${c}-${q}`;
-                    const isUsed = s.usedTiles.has(tileId) || s.usedTiles.has(`${s.roundIndex}-${c}-${q}`);
+                    const isUsed = s.usedTiles.has(tileId);
                     const question = cat.questions[q];
-                    html += `<div class="ctrl-tile ${isUsed ? 'used' : ''}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : `$${question.value}`}</div>`;
+                    const isDailyDouble = question.isDailyDouble || false;
+                    const classes = ['ctrl-tile'];
+                    if (isUsed) classes.push('used');
+                    if (isDailyDouble && !isUsed) classes.push('daily-double');
+                    html += `<div class="${classes.join(' ')}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : `$${question.value}`}</div>`;
                 } else {
                     html += `<div class="ctrl-tile used"></div>`;
                 }

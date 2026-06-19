@@ -193,6 +193,13 @@ body {
     cursor: default;
 }
 
+.ctrl-tile.daily-double {
+    background: var(--ctrl-border);
+    color: var(--ctrl-dark);
+    font-weight: bold;
+    border: 2px solid var(--ctrl-white);
+}
+
 #question-control, #final-control {
     background: var(--ctrl-bg);
     border: 3px solid var(--ctrl-border);
