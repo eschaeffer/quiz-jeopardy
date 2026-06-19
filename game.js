@@ -771,6 +771,7 @@ const JeopardyGame = (() => {
 
         showScreen('daily-double-screen');
         SoundEffects.dailyDouble();
+        broadcastState();
     }
 
     function selectDailyDoubleTeam(teamIndex) {
@@ -796,6 +797,7 @@ const JeopardyGame = (() => {
 
         $('#dd-wager-section').classList.remove('hidden');
         $('#dd-question-section').classList.add('hidden');
+        broadcastState();
     }
 
     function updateDailyDoubleWager() {
@@ -812,6 +814,7 @@ const JeopardyGame = (() => {
         $('#dd-wagering-team').textContent = `${team.name} is wagering $${gameState.dailyDoubleWager.toLocaleString()}`;
 
         showDailyDoubleQuestion();
+        broadcastState();
     }
 
     function showDailyDoubleQuestion() {
@@ -875,6 +878,7 @@ const JeopardyGame = (() => {
                 </div>
             </div>
         `;
+        broadcastState();
     }
 
     function scoreDailyDouble(isCorrect) {
@@ -908,6 +912,7 @@ const JeopardyGame = (() => {
         gameState.dailyDoubleWager = 0;
         renderBoard();
         showScreen('board-screen');
+        broadcastState();
 
         const allUsed = gameState.currentRound.categories.every((cat, c) =>
             cat.questions.every((_, q) => gameState.usedTiles.has(`${gameState.roundIndex}-${c}-${q}`))
