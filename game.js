@@ -276,8 +276,16 @@ const JeopardyGame = (() => {
                 }
                 break;
             case 'DD_CONFIRM_WAGER':
-                if (gameState.isDailyDouble) {
-                    confirmDailyDoubleWager();
+                if (gameState.isDailyDouble && typeof data.wager === 'number') {
+                    gameState.dailyDoubleWager = data.wager;
+                    $('#dd-wager-section').classList.add('hidden');
+                    $('#dd-question-section').classList.remove('hidden');
+
+                    const team = gameState.teams[gameState.dailyDoubleTeamIndex];
+                    $('#dd-wagering-team').textContent = `${team.name} is wagering $${gameState.dailyDoubleWager.toLocaleString()}`;
+
+                    showDailyDoubleQuestion();
+                    broadcastState();
                 }
                 break;
             case 'DD_REVEAL_ANSWER':
@@ -744,11 +752,8 @@ const JeopardyGame = (() => {
 
     function getDailyDoubleMaxWager(teamIndex) {
         const team = gameState.teams[teamIndex];
-        const minWager = getDailyDoubleMinWager();
-        if (team.score < minWager) {
-            return Math.max(...gameState.currentRound.categories.flatMap(c => c.questions.map(q => q.value)));
-        }
-        return team.score;
+        const boardMax = Math.max(...gameState.currentRound.categories.flatMap(c => c.questions.map(q => q.value)));
+        return Math.max(team.score, boardMax);
     }
 
     function showDailyDoubleScreen() {

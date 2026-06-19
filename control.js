@@ -155,6 +155,7 @@ const TeacherControl = (() => {
         $('#question-control').classList.add('hidden');
         $('#final-control').classList.add('hidden');
         $('#results-control').classList.add('hidden');
+        $('#dd-control').classList.add('hidden');
 
         if (!s.rounds || s.rounds.length === 0) return;
         const round = s.rounds[s.roundIndex];
@@ -227,6 +228,7 @@ const TeacherControl = (() => {
         $('#question-control').classList.remove('hidden');
         $('#final-control').classList.add('hidden');
         $('#results-control').classList.add('hidden');
+        $('#dd-control').classList.add('hidden');
 
         $('#control-question-category').textContent = q.category;
         $('#control-question-value').textContent = `$${q.value}`;
@@ -306,9 +308,8 @@ const TeacherControl = (() => {
                 $('#ctrl-dd-team-score').textContent = `$${team.score.toLocaleString()}`;
 
                 const minWager = s.roundIndex === 0 ? 5 : 100;
-                const maxWager = team.score < minWager
-                    ? Math.max(...s.rounds[s.roundIndex].categories.flatMap(c => c.questions.map(q => q.value)))
-                    : team.score;
+                const boardMax = Math.max(...s.rounds[s.roundIndex].categories.flatMap(c => c.questions.map(q => q.value)));
+                const maxWager = Math.max(team.score, boardMax);
 
                 const slider = $('#ctrl-dd-wager-slider');
                 slider.min = minWager;
@@ -407,6 +408,7 @@ const TeacherControl = (() => {
         $('#question-control').classList.add('hidden');
         $('#final-control').classList.remove('hidden');
         $('#results-control').classList.add('hidden');
+        $('#dd-control').classList.add('hidden');
 
         $('#control-final-category').textContent = s.currentRound?.name === 'FINAL JEOPARDY!' ? '' : '';
         if (s.rounds && s.rounds.length > 0) {
@@ -469,6 +471,7 @@ const TeacherControl = (() => {
         $('#question-control').classList.add('hidden');
         $('#final-control').classList.add('hidden');
         $('#results-control').classList.remove('hidden');
+        $('#dd-control').classList.add('hidden');
 
         $('#control-winner').textContent = s.winner || 'Game Over!';
         $('#control-final-scores').innerHTML = (s.finalScores || []).map(team => `
