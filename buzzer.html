@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy! Buzzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div id="buzzer-connect-screen" class="screen active">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="setup-container">
+                <h2>Enter Session Code</h2>
+                <div class="session-input-group">
+                    <input type="text" id="session-input" placeholder="Session code" maxlength="20" autocomplete="off">
+                </div>
+                <h2>Your Name</h2>
+                <div class="session-input-group">
+                    <input type="text" id="name-input" placeholder="Your name" maxlength="30" autocomplete="off">
+                </div>
+                <button id="connect-btn" class="btn primary">Connect</button>
+                <p class="buzzer-hint">Get the session code from your teacher.</p>
+            </div>
+        </div>
+
+        <div id="buzzer-ready-screen" class="screen">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="buzzer-ready-container">
+                <div id="player-name-display"></div>
+                <p class="waiting-text">Waiting for next question...</p>
+                <div id="connection-status">
+                    <span class="status-dot connected"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="buzzer-active-screen" class="screen">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="buzzer-active-container">
+                <p class="buzz-prompt">BUZZ IN!</p>
+                <button id="buzz-btn" class="buzz-button">BUZZ!</button>
+                <div id="buzz-result"></div>
+            </div>
+        </div>
+
+        <div id="buzzer-buzzed-screen" class="screen">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="buzzer-buzzed-container">
+                <p class="buzzed-text" id="buzzed-text">You buzzed in first!</p>
+                <p class="buzzed-subtext">Wait for the teacher to call on you.</p>
+            </div>
+        </div>
+
+        <div id="buzzer-locked-screen" class="screen">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="buzzer-locked-container">
+                <p class="locked-text">Too slow!</p>
+                <p class="locked-subtext" id="locked-subtext">Someone else buzzed first.</p>
+            </div>
+        </div>
+
+        <div id="buzzer-kicked-screen" class="screen">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="buzzer-kicked-container">
+                <p class="kicked-text">You have been removed from this session.</p>
+                <p class="kicked-subtext">Ask the teacher to rejoin.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="buzzer-client.js"></script>
+</body>
+</html>

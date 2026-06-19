@@ -1,0 +1,119 @@
+{
+  "rounds": [
+    {
+      "name": "JEOPARDY!",
+      "categories": [
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DOUBLE JEOPARDY!",
+      "categories": [
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 2000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 2000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 2000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 2000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        },
+        {
+          "name": "Category Name",
+          "questions": [
+            { "value": 400, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 800, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1200, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 1600, "question": "Question text here?", "answer": "Answer here" },
+            { "value": 2000, "question": "Question text here?", "answer": "Answer here" }
+          ]
+        }
+      ]
+    }
+  ],
+  "finalJeopardy": {
+    "category": "Final Category Name",
+    "clue": "The final jeopardy clue goes here.",
+    "answer": "The correct answer."
+  }
+}

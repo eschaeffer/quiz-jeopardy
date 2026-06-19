@@ -1,0 +1,1130 @@
+:root {
+    --jeopardy-blue: #060ce9;
+    --jeopardy-dark: #010a7a;
+    --jeopardy-darker: #000555;
+    --jeopardy-yellow: #ffcc00;
+    --jeopardy-gold: #d4a800;
+    --jeopardy-white: #ffffff;
+    --jeopardy-correct: #00cc00;
+    --jeopardy-wrong: #cc0000;
+    --tile-hover: #1a20ff;
+    --tile-used: #050a99;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    background: var(--jeopardy-dark);
+    color: var(--jeopardy-white);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.screen {
+    display: none;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.screen.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.game-title {
+    font-size: 5rem;
+    color: var(--jeopardy-yellow);
+    text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+    margin-bottom: 2rem;
+    letter-spacing: 0.2em;
+}
+
+/* Setup Screen */
+.setup-container {
+    background: var(--jeopardy-darker);
+    border: 3px solid var(--jeopardy-yellow);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 100%;
+}
+
+.setup-container h2 {
+    color: var(--jeopardy-yellow);
+    margin: 1.5rem 0 1rem;
+    font-size: 1.5rem;
+}
+
+.file-upload {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.file-label {
+    background: var(--jeopardy-blue);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.file-label:hover {
+    background: var(--tile-hover);
+}
+
+.file-upload input[type="file"] {
+    display: none;
+}
+
+.setup-actions {
+    margin-bottom: 1rem;
+}
+
+.team-input {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.team-input input {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    border: 2px solid var(--jeopardy-blue);
+    border-radius: 6px;
+    background: var(--jeopardy-dark);
+    color: var(--jeopardy-white);
+}
+
+.remove-team {
+    background: var(--jeopardy-wrong);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    width: 40px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.remove-team:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.settings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.settings label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.timer-setting {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 1.5rem;
+}
+
+.timer-setting input {
+    width: 80px;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 2px solid var(--jeopardy-blue);
+    border-radius: 6px;
+    background: var(--jeopardy-dark);
+    color: var(--jeopardy-white);
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 2rem;
+    font-size: 1.2rem;
+    font-family: inherit;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0.5rem;
+}
+
+.btn.primary {
+    background: var(--jeopardy-yellow);
+    color: var(--jeopardy-dark);
+}
+
+.btn.primary:hover {
+    background: var(--jeopardy-gold);
+    transform: scale(1.05);
+}
+
+.btn.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn.secondary {
+    background: var(--jeopardy-blue);
+    color: var(--jeopardy-white);
+}
+
+.btn.secondary:hover {
+    background: var(--tile-hover);
+}
+
+/* Board Screen */
+.board-header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+#round-title {
+    font-size: 3rem;
+    color: var(--jeopardy-yellow);
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+    margin-bottom: 1rem;
+}
+
+#scores-bar {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.score-display {
+    background: var(--jeopardy-darker);
+    border: 2px solid var(--jeopardy-yellow);
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    text-align: center;
+}
+
+.score-display .team-name {
+    font-size: 1.2rem;
+    color: var(--jeopardy-yellow);
+}
+
+.score-display .score-value {
+    font-size: 1.8rem;
+    color: var(--jeopardy-white);
+}
+
+#game-board {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    max-width: 1400px;
+}
+
+.category-header {
+    background: var(--jeopardy-blue);
+    color: var(--jeopardy-white);
+    padding: 1rem 0.5rem;
+    text-align: center;
+    font-size: 1.2rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    word-wrap: break-word;
+}
+
+.tile {
+    background: var(--jeopardy-blue);
+    color: var(--jeopardy-yellow);
+    font-size: 2.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.tile:hover:not(.used) {
+    background: var(--tile-hover);
+    transform: scale(1.05);
+}
+
+.tile.used {
+    background: var(--tile-used);
+    color: transparent;
+    cursor: default;
+    text-shadow: none;
+}
+
+/* Question Screen */
+#question-screen {
+    justify-content: center;
+}
+
+#question-container {
+    background: var(--jeopardy-darker);
+    border: 4px solid var(--jeopardy-yellow);
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 900px;
+    width: 100%;
+    text-align: center;
+}
+
+#question-category {
+    font-size: 1.5rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 0.5rem;
+}
+
+#question-value {
+    font-size: 2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 2rem;
+}
+
+#question-text {
+    font-size: 2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 2rem;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Timer */
+#timer-display, #final-timer-display {
+    width: 100%;
+    height: 30px;
+    background: var(--jeopardy-dark);
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 1rem 0;
+    position: relative;
+}
+
+#timer-bar, #final-timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--jeopardy-correct), var(--jeopardy-yellow));
+    transition: width 1s linear;
+    border-radius: 15px;
+}
+
+#timer-bar.warning, #final-timer-bar.warning {
+    background: linear-gradient(90deg, var(--jeopardy-wrong), var(--jeopardy-yellow));
+}
+
+#timer-text, #final-timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    color: var(--jeopardy-white);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Answer Section */
+#answer-container, #final-answer-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--jeopardy-blue);
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#answer-text, #final-answer {
+    font-size: 1.8rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 1.5rem;
+}
+
+#scoring-section h3, #final-scoring-section h3 {
+    color: var(--jeopardy-white);
+    margin-bottom: 1rem;
+}
+
+#team-scoring, #final-team-scoring {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.team-score-btn {
+    background: var(--jeopardy-dark);
+    border: 2px solid var(--jeopardy-blue);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 150px;
+}
+
+.team-score-btn .name {
+    font-size: 1.2rem;
+    color: var(--jeopardy-yellow);
+}
+
+.team-score-btn .buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.score-correct, .score-wrong {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.score-correct {
+    background: var(--jeopardy-correct);
+    color: white;
+}
+
+.score-correct:hover {
+    background: #00ff00;
+}
+
+.score-wrong {
+    background: var(--jeopardy-wrong);
+    color: white;
+}
+
+.score-wrong:hover {
+    background: #ff0000;
+}
+
+.score-correct.selected, .score-wrong.selected {
+    box-shadow: 0 0 0 3px var(--jeopardy-yellow);
+}
+
+/* Final Jeopardy */
+.final-title {
+    font-size: 4rem;
+    color: var(--jeopardy-yellow);
+    text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+    margin-bottom: 1rem;
+}
+
+#final-category {
+    font-size: 2rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 2rem;
+}
+
+#final-wager-section, #final-clue-section {
+    background: var(--jeopardy-darker);
+    border: 3px solid var(--jeopardy-yellow);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+}
+
+.wager-input {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--jeopardy-dark);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.wager-input label {
+    font-size: 1.2rem;
+    color: var(--jeopardy-yellow);
+}
+
+.wager-input input {
+    width: 150px;
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    border: 2px solid var(--jeopardy-blue);
+    border-radius: 6px;
+    background: var(--jeopardy-darker);
+    color: var(--jeopardy-white);
+    text-align: center;
+}
+
+#final-clue {
+    font-size: 2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 2rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Results Screen */
+#final-scores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.final-score-card {
+    background: var(--jeopardy-darker);
+    border: 3px solid var(--jeopardy-yellow);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    min-width: 200px;
+}
+
+.final-score-card.winner {
+    border-color: var(--jeopardy-correct);
+    box-shadow: 0 0 20px rgba(0, 204, 0, 0.5);
+}
+
+.final-score-card .name {
+    font-size: 1.5rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 0.5rem;
+}
+
+.final-score-card .score {
+    font-size: 2.5rem;
+    color: var(--jeopardy-white);
+}
+
+#winner-announcement {
+    font-size: 2rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .game-title {
+        font-size: 3rem;
+    }
+
+    .tile {
+        font-size: 1.5rem;
+        padding: 1rem;
+    }
+
+    .category-header {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    #question-text, #final-clue {
+        font-size: 1.5rem;
+    }
+
+    #question-container, #final-wager-section, #final-clue-section {
+        padding: 1.5rem;
+    }
+}
+
+/* Buzzer Setup */
+.buzzer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.buzzer-toggle input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+#buzzer-setup {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(6, 12, 233, 0.2);
+    border-radius: 8px;
+    border: 1px solid var(--jeopardy-blue);
+}
+
+.buzzer-info p {
+    font-size: 0.95rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 0.75rem;
+}
+
+#session-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.session-label {
+    font-size: 0.9rem;
+    color: var(--jeopardy-yellow);
+}
+
+.session-code {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--jeopardy-white);
+    letter-spacing: 0.15em;
+    font-family: monospace;
+}
+
+.btn.small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+#connected-players h4 {
+    color: var(--jeopardy-yellow);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+#players-list {
+    list-style: none;
+    padding: 0;
+}
+
+#players-list li {
+    padding: 0.3rem 0;
+    font-size: 0.95rem;
+    color: var(--jeopardy-white);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#players-list .no-players {
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+}
+
+#qr-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+#qr-section h4 {
+    color: var(--jeopardy-yellow);
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+#qr-container {
+    display: inline-block;
+    padding: 0.5rem;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+#qr-container img {
+    display: block;
+}
+
+.qr-hint {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.5rem;
+}
+
+.player-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.player-online .player-status-dot {
+    background: var(--jeopardy-correct);
+    box-shadow: 0 0 4px var(--jeopardy-correct);
+}
+
+.player-offline .player-status-dot {
+    background: var(--jeopardy-wrong);
+    box-shadow: 0 0 4px var(--jeopardy-wrong);
+}
+
+.player-offline {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.remove-player {
+    background: transparent;
+    border: none;
+    color: var(--jeopardy-wrong);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    margin-left: auto;
+}
+
+.remove-player:hover {
+    opacity: 1;
+}
+
+/* Buzz Indicator */
+#buzz-indicator {
+    background: var(--jeopardy-yellow);
+    color: var(--jeopardy-dark);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    animation: buzzPulse 0.5s ease-out;
+}
+
+@keyframes buzzPulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Buzzer Client Screens */
+.buzzer-ready-container,
+.buzzer-active-container,
+.buzzer-buzzed-container,
+.buzzer-locked-container {
+    background: var(--jeopardy-darker);
+    border: 3px solid var(--jeopardy-yellow);
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+
+#player-name-display {
+    font-size: 1.5rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 1rem;
+}
+
+.waiting-text {
+    font-size: 1.2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 1.5rem;
+}
+
+#connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.connected {
+    background: var(--jeopardy-correct);
+    box-shadow: 0 0 6px var(--jeopardy-correct);
+}
+
+.status-dot.disconnected {
+    background: var(--jeopardy-wrong);
+}
+
+.status-dot.connecting {
+    background: var(--jeopardy-yellow);
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.buzz-prompt {
+    font-size: 2rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 2rem;
+    animation: buzzPulse 0.3s ease-out;
+}
+
+.buzz-button {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: var(--jeopardy-blue);
+    color: var(--jeopardy-yellow);
+    font-size: 2.5rem;
+    font-family: inherit;
+    border: 4px solid var(--jeopardy-yellow);
+    cursor: pointer;
+    transition: all 0.1s;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 30px rgba(6, 12, 233, 0.5);
+}
+
+.buzz-button:active {
+    transform: scale(0.95);
+    background: var(--tile-hover);
+}
+
+.buzz-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#buzz-result {
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    color: var(--jeopardy-white);
+}
+
+.buzzed-text, .locked-text {
+    font-size: 2rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 1rem;
+}
+
+.buzzed-subtext, .locked-subtext {
+    font-size: 1.1rem;
+    color: var(--jeopardy-white);
+}
+
+.buzzer-kicked-container {
+    background: var(--jeopardy-darker);
+    border: 3px solid var(--jeopardy-wrong);
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+
+.kicked-text {
+    font-size: 2rem;
+    color: var(--jeopardy-wrong);
+    margin-bottom: 1rem;
+}
+
+.kicked-subtext {
+    font-size: 1.1rem;
+    color: var(--jeopardy-white);
+}
+
+.session-input-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.session-input-group input {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 1.2rem;
+    text-align: center;
+    letter-spacing: 0.15em;
+    border: 2px solid var(--jeopardy-blue);
+    border-radius: 8px;
+    background: var(--jeopardy-dark);
+    color: var(--jeopardy-white);
+    text-transform: uppercase;
+}
+
+.buzzer-hint {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#mute-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    min-width: 70px;
+}
+
+/* Disconnect Banner (Student) */
+.disconnected-banner {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: var(--jeopardy-wrong);
+    color: var(--jeopardy-white);
+    padding: 1rem 1.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.banner-spinner {
+    width: 16px;
+    height: 16px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--jeopardy-white);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Daily Double */
+#daily-double-screen {
+    justify-content: center;
+}
+
+#dd-container {
+    background: var(--jeopardy-darker);
+    border: 4px solid var(--jeopardy-yellow);
+    border-radius: 16px;
+    padding: 3rem;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+}
+
+#dd-title {
+    font-size: 3.5rem;
+    color: var(--jeopardy-yellow);
+    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6);
+    margin-bottom: 2rem;
+    letter-spacing: 0.15em;
+    animation: ddPulse 1s ease-out;
+}
+
+@keyframes ddPulse {
+    0% { transform: scale(0.7); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+#dd-team-selection h3 {
+    color: var(--jeopardy-white);
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#dd-team-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.dd-team-select-btn {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    font-family: inherit;
+    background: var(--jeopardy-blue);
+    color: var(--jeopardy-white);
+    border: 2px solid var(--jeopardy-yellow);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dd-team-select-btn:hover {
+    background: var(--tile-hover);
+    transform: scale(1.05);
+}
+
+#dd-wager-section h3 {
+    color: var(--jeopardy-yellow);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.dd-wager-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dd-wager-control label {
+    font-size: 1.2rem;
+    color: var(--jeopardy-white);
+}
+
+#dd-wager-display {
+    font-size: 3rem;
+    color: var(--jeopardy-yellow);
+    font-family: inherit;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#dd-wager-slider {
+    width: 100%;
+    max-width: 500px;
+    height: 30px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--jeopardy-dark);
+    border-radius: 15px;
+    outline: none;
+    cursor: pointer;
+}
+
+#dd-wager-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--jeopardy-yellow);
+    cursor: pointer;
+    border: 3px solid var(--jeopardy-white);
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
+#dd-wager-slider::-moz-range-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--jeopardy-yellow);
+    cursor: pointer;
+    border: 3px solid var(--jeopardy-white);
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
+#dd-wagering-team {
+    font-size: 1.3rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 1rem;
+}
+
+#dd-question-category {
+    font-size: 1.5rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 0.5rem;
+}
+
+#dd-question-value {
+    font-size: 2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 2rem;
+}
+
+#dd-question-text {
+    font-size: 2rem;
+    color: var(--jeopardy-white);
+    margin-bottom: 2rem;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+#dd-timer-display {
+    width: 100%;
+    height: 30px;
+    background: var(--jeopardy-dark);
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 1rem 0;
+    position: relative;
+}
+
+#dd-timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--jeopardy-correct), var(--jeopardy-yellow));
+    transition: width 1s linear;
+    border-radius: 15px;
+}
+
+#dd-timer-bar.warning {
+    background: linear-gradient(90deg, var(--jeopardy-wrong), var(--jeopardy-yellow));
+}
+
+#dd-timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    color: var(--jeopardy-white);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#dd-scoring-section h3 {
+    color: var(--jeopardy-white);
+    margin-bottom: 1rem;
+}
+
+#dd-team-scoring {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+#dd-answer-container {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--jeopardy-blue);
+    animation: slideUp 0.4s ease-out;
+}
+
+#dd-answer-text {
+    font-size: 1.8rem;
+    color: var(--jeopardy-yellow);
+    margin-bottom: 1.5rem;
+}

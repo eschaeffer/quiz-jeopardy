@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Jeopardy! Teacher Control</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="control.css">
+</head>
+<body>
+    <div id="app">
+        <div id="connect-screen" class="screen active">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="setup-container">
+                <h2>Connect to Session</h2>
+                <div class="session-input-group">
+                    <input type="text" id="session-input" placeholder="Session code" maxlength="20" autocomplete="off">
+                </div>
+                <button id="connect-btn" class="btn primary">Connect</button>
+                <p class="hint">Enter the session code from the main screen.</p>
+            </div>
+        </div>
+
+        <div id="control-screen" class="screen">
+            <div id="control-header">
+                <h2 id="control-title">JEOPARDY!</h2>
+                <div id="control-scores"></div>
+            </div>
+
+            <div id="board-control" class="hidden">
+                <div id="control-board"></div>
+            </div>
+
+            <div id="question-control" class="hidden">
+                <div id="control-question-category"></div>
+                <div id="control-question-value"></div>
+                <div id="control-question-text"></div>
+                <div id="control-buzz-indicator" class="hidden">
+                    <span id="control-buzz-text"></span>
+                </div>
+                <div id="control-timer-display" class="hidden">
+                    <div id="control-timer-bar"></div>
+                    <span id="control-timer-text">30</span>
+                </div>
+                <div class="control-actions">
+                    <button id="ctrl-reveal-btn" class="ctrl-btn">Reveal Answer</button>
+                    <button id="ctrl-pause-btn" class="ctrl-btn">Pause Timer</button>
+                    <button id="ctrl-continue-btn" class="ctrl-btn">Continue</button>
+                </div>
+                <div id="control-scoring" class="hidden">
+                    <h3>Score Question</h3>
+                    <div id="control-team-scoring"></div>
+                </div>
+                <div id="control-answer" class="hidden">
+                    <div id="control-answer-text"></div>
+                </div>
+            </div>
+
+            <div id="final-control" class="hidden">
+                <div id="control-final-category"></div>
+                <div id="control-final-clue"></div>
+                <div id="control-final-timer-display" class="hidden">
+                    <div id="control-final-timer-bar"></div>
+                    <span id="control-final-timer-text">30</span>
+                </div>
+                <div class="control-actions">
+                    <button id="ctrl-final-reveal-btn" class="ctrl-btn">Reveal Answer</button>
+                    <button id="ctrl-final-pause-btn" class="ctrl-btn">Pause Timer</button>
+                    <button id="ctrl-final-continue-btn" class="ctrl-btn">See Results</button>
+                </div>
+                <div id="control-final-scoring" class="hidden">
+                    <h3>Score Responses</h3>
+                    <div id="control-final-team-scoring"></div>
+                </div>
+                <div id="control-final-answer" class="hidden">
+                    <div id="control-final-answer-text"></div>
+                </div>
+            </div>
+
+            <div id="results-control" class="hidden">
+                <div id="control-winner"></div>
+                <div id="control-final-scores"></div>
+                <button id="ctrl-play-again-btn" class="ctrl-btn">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="control.js"></script>
+</body>
+</html>

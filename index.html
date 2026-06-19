@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy!</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="screen active">
+            <h1 class="game-title">JEOPARDY!</h1>
+            <div class="setup-container">
+                <h2>Import Game Data</h2>
+                <div class="file-upload">
+                    <label for="data-file" class="file-label">Choose JSON File</label>
+                    <input type="file" id="data-file" accept=".json">
+                    <span id="file-name">No file selected</span>
+                </div>
+                <div class="setup-actions">
+                    <button id="load-sample-btn" class="btn secondary">Load Sample Data</button>
+                </div>
+                <h2>Game Participants</h2>
+                <div id="teams-container">
+                    <div class="team-input">
+                        <input type="text" class="team-name" value="Team 1" placeholder="Team name">
+                        <button class="remove-team" disabled>&times;</button>
+                    </div>
+                    <div class="team-input">
+                        <input type="text" class="team-name" value="Team 2" placeholder="Team name">
+                        <button class="remove-team">&times;</button>
+                    </div>
+                </div>
+                <button id="add-team-btn" class="btn secondary">+ Add Team</button>
+                <h2>Settings</h2>
+                <div class="settings">
+                    <label>
+                        <input type="checkbox" id="timer-enabled" checked>
+                        Enable Timer
+                    </label>
+                    <div class="timer-setting">
+                        <label for="timer-duration">Timer (seconds):</label>
+                        <input type="number" id="timer-duration" value="30" min="5" max="300">
+                    </div>
+                    <label class="buzzer-toggle">
+                        <input type="checkbox" id="buzzer-enabled">
+                        Enable Phone Buzzers
+                    </label>
+                    <div id="buzzer-setup" class="hidden">
+                        <div class="buzzer-info">
+                            <p>Students will connect to this session on their phones.</p>
+                            <div id="session-display">
+                                <span class="session-label">Session Code:</span>
+                                <span class="session-code" id="session-code">---</span>
+                                <button id="copy-session-btn" class="btn secondary small">Copy Link</button>
+                            </div>
+                            <div id="connected-players">
+                                <h4>Connected Players</h4>
+                                <ul id="players-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="qr-section" class="hidden">
+                    <h4>Student Buzzer QR Code</h4>
+                    <div id="qr-container"></div>
+                    <p class="qr-hint">Scan to join this session</p>
+                </div>
+                <div id="control-qr-section" class="hidden">
+                    <h4>Teacher Mobile Control QR Code</h4>
+                    <div id="control-qr-container"></div>
+                    <p class="qr-hint">Scan to control the game from your phone</p>
+                </div>
+                <button id="start-btn" class="btn primary" disabled>Start Game</button>
+            </div>
+        </div>
+
+        <!-- Board Screen -->
+        <div id="board-screen" class="screen">
+            <div class="board-header">
+                <h1 id="round-title">JEOPARDY!</h1>
+                <div id="scores-bar"></div>
+            </div>
+            <div id="game-board"></div>
+        </div>
+
+        <!-- Question Screen -->
+        <div id="question-screen" class="screen">
+            <div id="question-container">
+                <div id="question-category"></div>
+                <div id="question-value"></div>
+                <div id="question-text"></div>
+                <div id="buzz-indicator" class="hidden">
+                    <span id="buzz-text"></span>
+                </div>
+                <div id="timer-display" class="hidden">
+                    <div id="timer-bar"></div>
+                    <span id="timer-text">30</span>
+                </div>
+                <div id="scoring-section" class="hidden">
+                    <h3>Score Question</h3>
+                    <div id="team-scoring"></div>
+                </div>
+                <button id="reveal-answer-btn" class="btn primary hidden">Reveal Answer</button>
+                <div id="answer-container" class="hidden">
+                    <div id="answer-text"></div>
+                </div>
+                <button id="continue-btn" class="btn primary hidden">Continue</button>
+            </div>
+        </div>
+
+        <!-- Final Jeopardy Screen -->
+        <div id="final-screen" class="screen">
+            <h1 class="final-title">FINAL JEOPARDY!</h1>
+            <div id="final-category"></div>
+            <div id="final-wager-section">
+                <h2>Place Your Wagers</h2>
+                <div id="final-wagers"></div>
+                <button id="reveal-final-btn" class="btn primary">Reveal Clue</button>
+            </div>
+            <div id="final-clue-section" class="hidden">
+                <div id="final-clue"></div>
+                <div id="final-timer-display" class="hidden">
+                    <div id="final-timer-bar"></div>
+                    <span id="final-timer-text">30</span>
+                </div>
+                <div id="final-scoring-section" class="hidden">
+                    <h3>Score Responses</h3>
+                    <div id="final-team-scoring"></div>
+                </div>
+                <button id="reveal-final-answer-btn" class="btn primary hidden">Reveal Answer</button>
+                <div id="final-answer-container" class="hidden">
+                    <div id="final-answer"></div>
+                </div>
+                <button id="final-continue-btn" class="btn primary hidden">See Results</button>
+            </div>
+        </div>
+
+        <!-- Daily Double Screen -->
+        <div id="daily-double-screen" class="screen">
+            <div id="dd-container">
+                <div id="dd-title">DAILY DOUBLE</div>
+                <div id="dd-team-selection">
+                    <h3>Who found the Daily Double?</h3>
+                    <div id="dd-team-buttons"></div>
+                </div>
+                <div id="dd-wager-section" class="hidden">
+                    <h3><span id="dd-team-name"></span> — <span id="dd-team-score"></span></h3>
+                    <div class="dd-wager-control">
+                        <label for="dd-wager-slider">Wager:</label>
+                        <div id="dd-wager-display">$0</div>
+                        <input type="range" id="dd-wager-slider" min="0" max="1000" step="1" value="0">
+                        <button id="dd-wager-confirm-btn" class="btn primary" onclick="JeopardyGame.confirmDailyDoubleWager()">Lock In Wager</button>
+                    </div>
+                </div>
+                <div id="dd-question-section" class="hidden">
+                    <div id="dd-wagering-team"></div>
+                    <div id="dd-question-category"></div>
+                    <div id="dd-question-value"></div>
+                    <div id="dd-question-text"></div>
+                    <div id="dd-timer-display" class="hidden">
+                        <div id="dd-timer-bar"></div>
+                        <span id="dd-timer-text">30</span>
+                    </div>
+                    <div id="dd-scoring-section" class="hidden">
+                        <h3>Score Response</h3>
+                        <div id="dd-team-scoring"></div>
+                    </div>
+                    <button id="dd-reveal-answer-btn" class="btn primary" onclick="JeopardyGame.revealDailyDoubleAnswer()">Reveal Answer</button>
+                    <div id="dd-answer-container" class="hidden">
+                        <div id="dd-answer-text"></div>
+                    </div>
+                    <button id="dd-continue-btn" class="btn primary" onclick="JeopardyGame.continueFromDailyDouble()">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <h1 class="game-title">GAME OVER</h1>
+            <div id="final-scores"></div>
+            <div id="winner-announcement"></div>
+            <button id="play-again-btn" class="btn primary">New Game</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="sound-effects.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
