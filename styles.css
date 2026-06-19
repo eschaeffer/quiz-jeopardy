@@ -648,6 +648,17 @@ body {
     text-align: center;
 }
 
+#control-qr-container {
+    display: inline-block;
+    padding: 0.5rem;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+#control-qr-container img {
+    display: block;
+}
+
 #qr-section h4 {
     color: var(--jeopardy-yellow);
     margin-bottom: 0.75rem;
