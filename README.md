@@ -1,17 +1,20 @@
-# Jeopardy! Review Game
+# Classroom Trivia Showdown
 
-A static, browser-based Jeopardy game for classroom review sessions.
+A static, browser-based trivia game for classroom review sessions.
 
 ## Features
 
-- **Classic Jeopardy styling** with the iconic blue board and yellow text
+- **Original visual identity** with coordinated category colors and modern design
 - **JSON data import** for custom questions/answers
 - **Multiple teams** (2+ participants)
-- **Two rounds**: Jeopardy + Double Jeopardy + Final Jeopardy
+- **Two rounds** with increasing point values + Final Showdown
 - **Configurable timer** with visual countdown bar
 - **Standard scoring**: correct adds points, incorrect deducts points
 - **Animated question reveals** with fade-in effects
-- **Extensible architecture** ready for Daily Doubles
+- **Bonus Questions** with team selection and wager-based scoring
+- **Phone buzzers** via MQTT for real-time student participation
+- **Teacher mobile control** for managing the game from a phone or tablet
+- **Sound effects** via Web Audio API (no external files)
 
 ## Quick Start
 
@@ -29,7 +32,7 @@ Create a JSON file with this structure:
 {
   "rounds": [
     {
-      "name": "JEOPARDY!",
+      "name": "Round 1",
       "categories": [
         {
           "name": "Category Name",
@@ -44,7 +47,7 @@ Create a JSON file with this structure:
       ]
     },
     {
-      "name": "DOUBLE JEOPARDY!",
+      "name": "Round 2",
       "categories": [
         {
           "name": "Category Name",
@@ -59,7 +62,7 @@ Create a JSON file with this structure:
       ]
     }
   ],
-  "finalJeopardy": {
+  "finalShowdown": {
     "category": "Category Name",
     "clue": "The clue text",
     "answer": "The answer"
@@ -77,20 +80,20 @@ Create a JSON file with this structure:
       - `value`: Point value (number)
       - `question`: The question/clue text
       - `answer`: The correct answer
-- `finalJeopardy` (optional): Final Jeopardy round
+- `finalShowdown` (optional): Final round
   - `category`: Category name
   - `clue`: The clue text
   - `answer`: The correct answer
 
-### Future: Daily Double Support
+### Bonus Questions
 
-Questions can optionally include `"isDailyDouble": true` for future Daily Double functionality.
+Questions can include `"isBonusQuestion": true` to trigger the Bonus Question flow with team selection and wager-based scoring.
 
 ## Game Flow
 
 1. **Setup**: Import data, configure teams and settings
 2. **Round Play**: Click tiles to reveal questions, answer within timer, score teams
-3. **Final Jeopardy**: Teams place wagers, clue is revealed, score responses
+3. **Final Showdown**: Teams place wagers, clue is revealed, score responses
 4. **Results**: Final scores displayed with winner announcement
 
 ## Hosting
@@ -100,6 +103,9 @@ This is a fully static site - just serve the files from any web server or open `
 ## Files
 
 - `index.html` - Game interface
-- `styles.css` - Classic Jeopardy styling
+- `styles.css` - Visual design and styling
 - `game.js` - Game logic
+- `sound-effects.js` - Web Audio API sound effects
+- `buzzer.html` / `buzzer-client.js` - Student phone buzzer interface
+- `control.html` / `control.js` / `control.css` - Teacher mobile control
 - `sample-data.json` - Example question data

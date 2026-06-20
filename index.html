@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeopardy!</title>
+    <title>Classroom Trivia Showdown</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <!-- Setup Screen -->
         <div id="setup-screen" class="screen active">
-            <h1 class="game-title">JEOPARDY!</h1>
+            <h1 class="game-title">Trivia Showdown</h1>
             <div class="setup-container">
                 <h2>Import Game Data</h2>
                 <div class="file-upload">
@@ -79,7 +79,7 @@
         <!-- Board Screen -->
         <div id="board-screen" class="screen">
             <div class="board-header">
-                <h1 id="round-title">JEOPARDY!</h1>
+                <h1 id="round-title">Round 1</h1>
                 <div id="scores-bar"></div>
             </div>
             <div id="game-board"></div>
@@ -110,9 +110,9 @@
             </div>
         </div>
 
-        <!-- Final Jeopardy Screen -->
+        <!-- Final Showdown Screen -->
         <div id="final-screen" class="screen">
-            <h1 class="final-title">FINAL JEOPARDY!</h1>
+            <h1 class="final-title">Final Showdown</h1>
             <div id="final-category"></div>
             <div id="final-wager-section">
                 <h2>Place Your Wagers</h2>
@@ -137,19 +137,19 @@
             </div>
         </div>
 
-        <!-- Daily Double Screen -->
+        <!-- Bonus Question Screen -->
         <div id="daily-double-screen" class="screen">
             <div id="dd-container">
-                <div id="dd-title">DAILY DOUBLE</div>
+                <div id="dd-title">Bonus Question</div>
                 <div id="dd-team-selection">
-                    <h3>Who found the Daily Double?</h3>
+                    <h3>Who found the Bonus Question?</h3>
                     <div id="dd-team-buttons"></div>
                 </div>
                 <div id="dd-wager-section" class="hidden">
                     <h3><span id="dd-team-name"></span> — <span id="dd-team-score"></span></h3>
                     <div class="dd-wager-control">
                         <label for="dd-wager-slider">Wager:</label>
-                        <div id="dd-wager-display">$0</div>
+                        <div id="dd-wager-display">0</div>
                         <input type="range" id="dd-wager-slider" min="0" max="1000" step="1" value="0">
                         <button id="dd-wager-confirm-btn" class="btn primary" onclick="JeopardyGame.confirmDailyDoubleWager()">Lock In Wager</button>
                     </div>
@@ -178,7 +178,7 @@
 
         <!-- Results Screen -->
         <div id="results-screen" class="screen">
-            <h1 class="game-title">GAME OVER</h1>
+            <h1 class="game-title">Game Over</h1>
             <div id="final-scores"></div>
             <div id="winner-announcement"></div>
             <button id="play-again-btn" class="btn primary">New Game</button>

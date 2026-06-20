@@ -1,7 +1,7 @@
 {
   "rounds": [
     {
-      "name": "JEOPARDY!",
+      "name": "Round 1",
       "categories": [
         {
           "name": "Category Name",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "name": "DOUBLE JEOPARDY!",
+      "name": "Round 2",
       "categories": [
         {
           "name": "Category Name",
@@ -111,9 +111,9 @@
       ]
     }
   ],
-  "finalJeopardy": {
+  "finalShowdown": {
     "category": "Final Category Name",
-    "clue": "The final jeopardy clue goes here.",
+    "clue": "The final showdown clue goes here.",
     "answer": "The correct answer."
   }
 }

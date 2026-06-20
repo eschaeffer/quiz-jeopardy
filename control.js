@@ -169,7 +169,7 @@ const TeacherControl = (() => {
 
         let html = '';
         for (const cat of round.categories) {
-            html += `<div class="ctrl-category-header">${cat.name}</div>`;
+            html += `<div class="ctrl-category-header cat-${c}">${cat.name}</div>`;
         }
 
         for (let q = 0; q < numQuestions; q++) {
@@ -180,10 +180,10 @@ const TeacherControl = (() => {
                     const isUsed = s.usedTiles.has(tileId);
                     const question = cat.questions[q];
                     const isDailyDouble = question.isDailyDouble || false;
-                    const classes = ['ctrl-tile'];
+                    const classes = ['ctrl-tile', `cat-${c}`];
                     if (isUsed) classes.push('used');
                     if (isDailyDouble && !isUsed) classes.push('daily-double');
-                    html += `<div class="${classes.join(' ')}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : `$${question.value}`}</div>`;
+                    html += `<div class="${classes.join(' ')}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : question.value}</div>`;
                 } else {
                     html += `<div class="ctrl-tile used"></div>`;
                 }
@@ -212,7 +212,7 @@ const TeacherControl = (() => {
         bar.innerHTML = localState.teams.map(team => `
             <div class="ctrl-score-item">
                 <div class="team-name">${team.name}</div>
-                <div class="score-value">$${team.score.toLocaleString()}</div>
+                <div class="score-value">${team.score.toLocaleString()}</div>
             </div>
         `).join('');
     }
@@ -231,7 +231,7 @@ const TeacherControl = (() => {
         $('#dd-control').classList.add('hidden');
 
         $('#control-question-category').textContent = q.category;
-        $('#control-question-value').textContent = `$${q.value}`;
+        $('#control-question-value').textContent = `${q.value}`;
         $('#control-question-text').textContent = q.question;
         $('#control-answer-text').textContent = `Answer: ${q.answer}`;
 
@@ -295,7 +295,7 @@ const TeacherControl = (() => {
 
             const btns = $('#ctrl-dd-team-buttons');
             btns.innerHTML = s.teams.map((team, i) =>
-                `<button class="ctrl-dd-team-btn ctrl-btn" onclick="TeacherControl.ddSelectTeam(${i})">${team.name} ($${team.score.toLocaleString()})</button>`
+                `<button class="ctrl-dd-team-btn ctrl-btn" onclick="TeacherControl.ddSelectTeam(${i})">${team.name} (${team.score.toLocaleString()})</button>`
             ).join('');
         } else if (s.ddWagerPhase) {
             $('#ctrl-dd-team-selection').classList.add('hidden');
@@ -305,7 +305,7 @@ const TeacherControl = (() => {
             const team = s.teams[s.ddTeamIndex];
             if (team) {
                 $('#ctrl-dd-team-name').textContent = team.name;
-                $('#ctrl-dd-team-score').textContent = `$${team.score.toLocaleString()}`;
+                $('#ctrl-dd-team-score').textContent = `${team.score.toLocaleString()}`;
 
                 const minWager = s.roundIndex === 0 ? 5 : 100;
                 const boardMax = Math.max(...s.rounds[s.roundIndex].categories.flatMap(c => c.questions.map(q => q.value)));
@@ -316,10 +316,10 @@ const TeacherControl = (() => {
                 slider.max = maxWager;
                 slider.step = minWager;
                 slider.value = Math.min(team.score, maxWager);
-                $('#ctrl-dd-wager-display').textContent = `$${parseInt(slider.value).toLocaleString()}`;
+                $('#ctrl-dd-wager-display').textContent = `${parseInt(slider.value).toLocaleString()}`;
 
                 slider.oninput = () => {
-                    $('#ctrl-dd-wager-display').textContent = `$${parseInt(slider.value).toLocaleString()}`;
+                    $('#ctrl-dd-wager-display').textContent = `${parseInt(slider.value).toLocaleString()}`;
                 };
             }
         } else if (s.ddQuestionSection) {
@@ -328,9 +328,9 @@ const TeacherControl = (() => {
             $('#ctrl-dd-question-section').classList.remove('hidden');
 
             const team = s.teams[s.ddTeamIndex];
-            $('#ctrl-dd-wagering-team').textContent = team ? `${team.name} is wagering $${(s.ddWager || 0).toLocaleString()}` : '';
+            $('#ctrl-dd-wagering-team').textContent = team ? `${team.name} is wagering ${(s.ddWager || 0).toLocaleString()}` : '';
             $('#ctrl-dd-question-category').textContent = q.category;
-            $('#ctrl-dd-question-value').textContent = `$${q.value}`;
+            $('#ctrl-dd-question-value').textContent = `${q.value}`;
             $('#ctrl-dd-question-text').textContent = q.question;
             $('#ctrl-dd-answer-text').textContent = `Answer: ${q.answer}`;
 
@@ -373,7 +373,7 @@ const TeacherControl = (() => {
         container.innerHTML = `
             <div class="ctrl-team-score">
                 <div class="name">${team.name}</div>
-                <div>Wagered: $${(localState.ddWager || 0).toLocaleString()}</div>
+                <div>Wagered: ${(localState.ddWager || 0).toLocaleString()}</div>
                 <div class="buttons">
                     <button class="ctrl-score-btn correct" onclick="TeacherControl.scoreTeam(${localState.ddTeamIndex}, true, false)">Correct</button>
                     <button class="ctrl-score-btn wrong" onclick="TeacherControl.scoreTeam(${localState.ddTeamIndex}, false, false)">Wrong</button>
@@ -390,7 +390,7 @@ const TeacherControl = (() => {
             return `
                 <div class="ctrl-team-score">
                     <div class="name">${team.name}</div>
-                    ${isFinal ? `<div>Wagered: $${wager.toLocaleString()}</div>` : ''}
+                    ${isFinal ? `<div>Wagered: ${wager.toLocaleString()}</div>` : ''}
                     <div class="buttons">
                         <button class="ctrl-score-btn correct" onclick="TeacherControl.scoreTeam(${i}, true, ${isFinal})">Correct</button>
                         <button class="ctrl-score-btn wrong" onclick="TeacherControl.scoreTeam(${i}, false, ${isFinal})">Wrong</button>
@@ -477,7 +477,7 @@ const TeacherControl = (() => {
         $('#control-final-scores').innerHTML = (s.finalScores || []).map(team => `
             <div class="ctrl-final-card ${team.isWinner ? 'winner' : ''}">
                 <div class="name">${team.name}</div>
-                <div class="score">$${team.score.toLocaleString()}</div>
+                <div class="score">${team.score.toLocaleString()}</div>
             </div>
         `).join('');
     }

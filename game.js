@@ -282,7 +282,7 @@ const JeopardyGame = (() => {
                     $('#dd-question-section').classList.remove('hidden');
 
                     const team = gameState.teams[gameState.dailyDoubleTeamIndex];
-                    $('#dd-wagering-team').textContent = `${team.name} is wagering $${gameState.dailyDoubleWager.toLocaleString()}`;
+                    $('#dd-wagering-team').textContent = `${team.name} is wagering ${gameState.dailyDoubleWager.toLocaleString()}`;
 
                     showDailyDoubleQuestion();
                     broadcastState();
@@ -476,7 +476,7 @@ const JeopardyGame = (() => {
         }
 
         gameState.rounds = data.rounds;
-        gameState.finalJeopardy = data.finalJeopardy || null;
+        gameState.finalJeopardy = data.finalShowdown || data.finalJeopardy || null;
         checkReadyToStart();
     }
 
@@ -484,14 +484,14 @@ const JeopardyGame = (() => {
         const sampleData = {
             rounds: [
                 {
-                    name: "JEOPARDY!",
+                    name: "Round 1",
                     categories: [
                         {
                             name: "Math",
                             questions: [
                                 { value: 200, question: "What is 15% of 200?", answer: "30" },
                                 { value: 400, question: "What is the square root of 144?", answer: "12" },
-                                { value: 600, question: "What is the area of a circle with radius 5? (use pi)", answer: "25pi or 78.54", isDailyDouble: true },
+                                { value: 600, question: "What is the area of a circle with radius 5? (use pi)", answer: "25pi or 78.54", isBonusQuestion: true },
                                 { value: 800, question: "What is the sum of interior angles in a hexagon?", answer: "720 degrees" },
                                 { value: 1000, question: "What is the derivative of x cubed plus 2x?", answer: "3x squared plus 2" }
                             ]
@@ -539,14 +539,14 @@ const JeopardyGame = (() => {
                     ]
                 },
                 {
-                    name: "DOUBLE JEOPARDY!",
+                    name: "Round 2",
                     categories: [
                         {
                             name: "Advanced Math",
                             questions: [
                                 { value: 400, question: "What is the integral of 2x?", answer: "x squared plus C" },
                                 { value: 800, question: "What is the value of log base 10 of 1000?", answer: "3" },
-                                { value: 1200, question: "What is 6 factorial?", answer: "720", isDailyDouble: true },
+                                { value: 1200, question: "What is 6 factorial?", answer: "720", isBonusQuestion: true },
                                 { value: 1600, question: "What is the Pythagorean theorem?", answer: "a squared plus b squared equals c squared" },
                                 { value: 2000, question: "What is the limit of sin(x)/x as x approaches 0?", answer: "1" }
                             ]
@@ -567,7 +567,7 @@ const JeopardyGame = (() => {
                                 { value: 400, question: "Who developed the theory of relativity?", answer: "Albert Einstein" },
                                 { value: 800, question: "Who discovered penicillin?", answer: "Alexander Fleming" },
                                 { value: 1200, question: "Who is known as the father of classical physics?", answer: "Isaac Newton" },
-                                { value: 1600, question: "Who won two Nobel Prizes for work on radioactivity?", answer: "Marie Curie", isDailyDouble: true },
+                                { value: 1600, question: "Who won two Nobel Prizes for work on radioactivity?", answer: "Marie Curie", isBonusQuestion: true },
                                 { value: 2000, question: "Who proposed the heliocentric model of the solar system?", answer: "Nicolaus Copernicus" }
                             ]
                         },
@@ -594,7 +594,7 @@ const JeopardyGame = (() => {
                     ]
                 }
             ],
-            finalJeopardy: {
+            finalShowdown: {
                 category: "Famous Equations",
                 clue: "This famous equation, E=mc squared, was introduced in a 1905 paper by this physicist.",
                 answer: "Albert Einstein (Theory of Special Relativity)"
@@ -679,7 +679,7 @@ const JeopardyGame = (() => {
         bar.innerHTML = gameState.teams.map((team) => `
             <div class="score-display">
                 <div class="team-name">${team.name}</div>
-                <div class="score-value">$${team.score.toLocaleString()}</div>
+                <div class="score-value">${team.score.toLocaleString()}</div>
             </div>
         `).join('');
     }
@@ -695,7 +695,7 @@ const JeopardyGame = (() => {
         let html = '';
 
         for (const cat of round.categories) {
-            html += `<div class="category-header">${cat.name}</div>`;
+            html += `<div class="category-header cat-${c}">${cat.name}</div>`;
         }
 
         for (let q = 0; q < numQuestions; q++) {
@@ -705,7 +705,7 @@ const JeopardyGame = (() => {
                     const tileId = `${gameState.roundIndex}-${c}-${q}`;
                     const isUsed = gameState.usedTiles.has(tileId);
                     const question = cat.questions[q];
-                    html += `<div class="tile ${isUsed ? 'used' : ''}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : `$${question.value}`}</div>`;
+                    html += `<div class="tile ${isUsed ? 'used' : ''} cat-${c}" data-id="${tileId}" data-cat="${c}" data-q="${q}">${isUsed ? '' : question.value}</div>`;
                 } else {
                     html += `<div class="tile used"></div>`;
                 }
@@ -736,7 +736,7 @@ const JeopardyGame = (() => {
             question: question.question,
             answer: question.answer,
             tileId: tileId,
-            isDailyDouble: question.isDailyDouble || false
+            isDailyDouble: question.isDailyDouble || question.isBonusQuestion || false
         };
 
         if (question.isDailyDouble) {
@@ -765,7 +765,7 @@ const JeopardyGame = (() => {
 
         const teamButtonsContainer = $('#dd-team-buttons');
         teamButtonsContainer.innerHTML = gameState.teams.map((team, i) => `
-            <button class="dd-team-select-btn" onclick="JeopardyGame.selectDailyDoubleTeam(${i})">${team.name} ($${team.score.toLocaleString()})</button>
+            <button class="dd-team-select-btn" onclick="JeopardyGame.selectDailyDoubleTeam(${i})">${team.name} (${team.score.toLocaleString()})</button>
         `).join('');
 
         $('#dd-team-name').textContent = '';
@@ -787,7 +787,7 @@ const JeopardyGame = (() => {
 
         $('#dd-team-selection').classList.add('hidden');
         $('#dd-team-name').textContent = team.name;
-        $('#dd-team-score').textContent = `$${team.score.toLocaleString()}`;
+        $('#dd-team-score').textContent = `${team.score.toLocaleString()}`;
 
         const wagerSlider = $('#dd-wager-slider');
         const wagerDisplay = $('#dd-wager-display');
@@ -795,7 +795,7 @@ const JeopardyGame = (() => {
         wagerSlider.max = maxWager;
         wagerSlider.step = minWager;
         wagerSlider.value = Math.min(team.score, maxWager);
-        wagerDisplay.textContent = `$${parseInt(wagerSlider.value).toLocaleString()}`;
+        wagerDisplay.textContent = `${parseInt(wagerSlider.value).toLocaleString()}`;
 
         wagerSlider.removeEventListener('input', updateDailyDoubleWager);
         wagerSlider.addEventListener('input', updateDailyDoubleWager);
@@ -807,7 +807,7 @@ const JeopardyGame = (() => {
 
     function updateDailyDoubleWager() {
         const wager = parseInt($('#dd-wager-slider').value);
-        $('#dd-wager-display').textContent = `$${wager.toLocaleString()}`;
+        $('#dd-wager-display').textContent = `${wager.toLocaleString()}`;
     }
 
     function confirmDailyDoubleWager() {
@@ -816,7 +816,7 @@ const JeopardyGame = (() => {
         $('#dd-question-section').classList.remove('hidden');
 
         const team = gameState.teams[gameState.dailyDoubleTeamIndex];
-        $('#dd-wagering-team').textContent = `${team.name} is wagering $${gameState.dailyDoubleWager.toLocaleString()}`;
+                    $('#dd-wagering-team').textContent = `${team.name} is wagering ${gameState.dailyDoubleWager.toLocaleString()}`;
 
         showDailyDoubleQuestion();
         broadcastState();
@@ -825,7 +825,7 @@ const JeopardyGame = (() => {
     function showDailyDoubleQuestion() {
         const q = gameState.currentQuestion;
         $('#dd-question-category').textContent = q.category;
-        $('#dd-question-value').textContent = `$${q.value}`;
+        $('#dd-question-value').textContent = `${q.value}`;
         $('#dd-question-text').textContent = q.question;
         $('#dd-answer-text').textContent = `Answer: ${q.answer}`;
         $('#dd-answer-container').classList.add('hidden');
@@ -854,7 +854,7 @@ const JeopardyGame = (() => {
         container.innerHTML = `
             <div class="team-score-btn">
                 <div class="name">${team.name}</div>
-                <div>Wagered: $${gameState.dailyDoubleWager.toLocaleString()}</div>
+                <div>Wagered: ${gameState.dailyDoubleWager.toLocaleString()}</div>
                 <div class="buttons">
                     <button class="score-correct" onclick="JeopardyGame.scoreDailyDouble(true)">Correct</button>
                     <button class="score-wrong" onclick="JeopardyGame.scoreDailyDouble(false)">Wrong</button>
@@ -876,7 +876,7 @@ const JeopardyGame = (() => {
         container.innerHTML = `
             <div class="team-score-btn">
                 <div class="name">${team.name}</div>
-                <div>Wagered: $${gameState.dailyDoubleWager.toLocaleString()}</div>
+                <div>Wagered: ${gameState.dailyDoubleWager.toLocaleString()}</div>
                 <div class="buttons">
                     <button class="score-correct" onclick="JeopardyGame.scoreDailyDouble(true)">Correct</button>
                     <button class="score-wrong" onclick="JeopardyGame.scoreDailyDouble(false)">Wrong</button>
@@ -933,7 +933,7 @@ const JeopardyGame = (() => {
     function showQuestionScreen() {
         const q = gameState.currentQuestion;
         $('#question-category').textContent = q.category;
-        $('#question-value').textContent = `$${q.value}`;
+        $('#question-value').textContent = `${q.value}`;
         $('#question-text').textContent = q.question;
         $('#answer-text').textContent = `Answer: ${q.answer}`;
         $('#answer-container').classList.add('hidden');
@@ -1045,7 +1045,7 @@ const JeopardyGame = (() => {
         const wagersContainer = $('#final-wagers');
         wagersContainer.innerHTML = gameState.teams.map((team, i) => `
             <div class="wager-input">
-                <label>${team.name} ($${team.score.toLocaleString()})</label>
+                <label>${team.name} (${team.score.toLocaleString()})</label>
                 <input type="number" id="wager-${i}" min="0" max="${team.score}" value="0">
             </div>
         `).join('');
@@ -1098,7 +1098,7 @@ const JeopardyGame = (() => {
         container.innerHTML = gameState.teams.map((team, i) => `
             <div class="team-score-btn" data-team="${i}">
                 <div class="name">${team.name}</div>
-                <div>Wagered: $${(gameState.finalWagers[i] || 0).toLocaleString()}</div>
+                <div>Wagered: ${(gameState.finalWagers[i] || 0).toLocaleString()}</div>
                 <div class="buttons">
                     <button class="score-correct" onclick="JeopardyGame.scoreFinalTeam(${i}, true)">Correct</button>
                     <button class="score-wrong" onclick="JeopardyGame.scoreFinalTeam(${i}, false)">Wrong</button>
@@ -1118,7 +1118,7 @@ const JeopardyGame = (() => {
         container.innerHTML = gameState.teams.map((team, i) => `
             <div class="team-score-btn" data-team="${i}">
                 <div class="name">${team.name}</div>
-                <div>Wagered: $${(gameState.finalWagers[i] || 0).toLocaleString()}</div>
+                <div>Wagered: ${(gameState.finalWagers[i] || 0).toLocaleString()}</div>
                 <div class="buttons">
                     <button class="score-correct" onclick="JeopardyGame.scoreFinalTeam(${i}, true)">Correct</button>
                     <button class="score-wrong" onclick="JeopardyGame.scoreFinalTeam(${i}, false)">Wrong</button>
@@ -1156,7 +1156,7 @@ const JeopardyGame = (() => {
         $('#final-scores').innerHTML = gameState.teams.map(team => `
             <div class="final-score-card ${team.score === maxScore && maxScore > 0 ? 'winner' : ''}">
                 <div class="name">${team.name}</div>
-                <div class="score">$${team.score.toLocaleString()}</div>
+                <div class="score">${team.score.toLocaleString()}</div>
             </div>
         `).join('');
 
