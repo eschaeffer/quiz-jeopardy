@@ -202,12 +202,13 @@ body {
     color: var(--ctrl-white);
     padding: 0.5rem 0.25rem;
     text-align: center;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 800;
     border-radius: var(--ctrl-radius-sm);
     text-transform: uppercase;
     word-wrap: break-word;
-    line-height: 1.2;
+    overflow-wrap: break-word;
+    line-height: 1.15;
     box-shadow: var(--ctrl-shadow-sm);
 }
 
@@ -307,38 +308,6 @@ body {
     font-weight: 800;
     margin-bottom: 0.75rem;
     display: inline-block;
-}
-
-#control-timer-display, #control-final-timer-display {
-    width: 100%;
-    height: 24px;
-    background: var(--ctrl-surface);
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 0.75rem 0;
-    position: relative;
-}
-
-#control-timer-bar, #control-final-timer-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--ctrl-correct), var(--ctrl-secondary));
-    transition: width 1s linear;
-    border-radius: 12px;
-}
-
-#control-timer-bar.warning, #control-final-timer-bar.warning {
-    background: linear-gradient(90deg, var(--ctrl-wrong), var(--ctrl-warning));
-}
-
-#control-timer-text, #control-final-timer-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.9rem;
-    color: var(--ctrl-white);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    font-weight: 700;
 }
 
 .control-actions {
@@ -622,38 +591,6 @@ body {
     line-height: 1.4;
 }
 
-#ctrl-dd-timer-display {
-    width: 100%;
-    height: 20px;
-    background: var(--ctrl-surface);
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 0.75rem 0;
-    position: relative;
-}
-
-#ctrl-dd-timer-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--ctrl-correct), var(--ctrl-secondary));
-    transition: width 1s linear;
-    border-radius: 10px;
-}
-
-#ctrl-dd-timer-bar.warning {
-    background: linear-gradient(90deg, var(--ctrl-wrong), var(--ctrl-warning));
-}
-
-#ctrl-dd-timer-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.85rem;
-    color: var(--ctrl-white);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    font-weight: 700;
-}
-
 #ctrl-dd-scoring h3 {
     color: var(--ctrl-text);
     margin-bottom: 0.75rem;
@@ -678,4 +615,16 @@ body {
     font-size: 1rem;
     color: var(--ctrl-accent);
     font-weight: 700;
+}
+
+#ctrl-skip-round-btn {
+    margin: 1rem auto 0;
+    display: block;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    opacity: 0.6;
+}
+
+#ctrl-skip-round-btn:hover {
+    opacity: 1;
 }

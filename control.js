@@ -13,9 +13,6 @@ const TeacherControl = (() => {
         currentQuestion: null,
         usedTiles: new Set(),
         scores: [],
-        timerRemaining: 0,
-        timerDuration: 0,
-        timerRunning: false,
         answerRevealed: false,
         scoringVisible: false,
         buzzLocked: false,
@@ -120,6 +117,7 @@ const TeacherControl = (() => {
             case 'board':
                 showScreen('control-screen');
                 renderBoardControl();
+                updateSkipButton();
                 break;
             case 'question':
                 showScreen('control-screen');
@@ -140,6 +138,18 @@ const TeacherControl = (() => {
         }
     }
 
+    function updateSkipButton() {
+        const btn = $('#ctrl-skip-round-btn');
+        if (!btn || !localState.rounds) return;
+        if (localState.roundIndex < localState.rounds.length) {
+            btn.classList.remove('hidden');
+            const isLastRound = localState.roundIndex >= localState.rounds.length - 1;
+            btn.textContent = isLastRound ? 'Skip to Final Showdown' : 'Skip to Next Round';
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+
     function renderBoardControl() {
         const s = localState;
         console.log('[control] renderBoardControl called:', {
@@ -148,8 +158,9 @@ const TeacherControl = (() => {
             roundIndex: s.roundIndex,
             currentRound: s.rounds?.[s.roundIndex]?.name
         });
-        $('#control-title').textContent = s.currentRound?.name || 'JEOPARDY!';
+        $('#control-title').textContent = s.currentRound?.name || 'ROUND 1';
         renderControlScores();
+        $('#control-header').classList.remove('hidden');
 
         $('#board-control').classList.remove('hidden');
         $('#question-control').classList.add('hidden');
@@ -168,7 +179,8 @@ const TeacherControl = (() => {
         board.style.gridTemplateColumns = `repeat(${numCategories}, 1fr)`;
 
         let html = '';
-        for (const cat of round.categories) {
+        for (let c = 0; c < numCategories; c++) {
+            const cat = round.categories[c];
             html += `<div class="ctrl-category-header cat-${c}">${cat.name}</div>`;
         }
 
@@ -223,6 +235,7 @@ const TeacherControl = (() => {
         if (!q) return;
 
         renderControlScores();
+        $('#control-header').classList.remove('hidden');
 
         $('#board-control').classList.add('hidden');
         $('#question-control').classList.remove('hidden');
@@ -242,16 +255,6 @@ const TeacherControl = (() => {
             $('#control-buzz-indicator').classList.add('hidden');
         }
 
-        if (s.timerRunning || s.timerRemaining > 0) {
-            $('#control-timer-display').classList.remove('hidden');
-            const pct = (s.timerRemaining / s.timerDuration) * 100;
-            $('#control-timer-bar').style.width = `${pct}%`;
-            $('#control-timer-text').textContent = s.timerRemaining;
-            $('#control-timer-bar').classList.toggle('warning', pct < 30);
-        } else {
-            $('#control-timer-display').classList.add('hidden');
-        }
-
         if (s.scoringVisible) {
             $('#control-scoring').classList.remove('hidden');
             renderControlTeamScoring(false);
@@ -268,9 +271,6 @@ const TeacherControl = (() => {
             $('#ctrl-reveal-btn').classList.remove('hidden');
             $('#ctrl-continue-btn').classList.add('hidden');
         }
-
-        $('#ctrl-pause-btn').textContent = s.timerRunning ? 'Pause Timer' : 'Timer Stopped';
-        $('#ctrl-pause-btn').disabled = !s.timerRunning;
     }
 
     function renderDailyDoubleControl() {
@@ -279,6 +279,7 @@ const TeacherControl = (() => {
         if (!q) return;
 
         renderControlScores();
+        $('#control-header').classList.remove('hidden');
 
         $('#board-control').classList.add('hidden');
         $('#question-control').classList.add('hidden');
@@ -286,7 +287,7 @@ const TeacherControl = (() => {
         $('#results-control').classList.add('hidden');
         $('#dd-control').classList.remove('hidden');
 
-        $('#ctrl-dd-title').textContent = 'DAILY DOUBLE';
+        $('#ctrl-dd-title').textContent = 'BONUS QUESTION';
 
         if (s.ddTeamSelection) {
             $('#ctrl-dd-team-selection').classList.remove('hidden');
@@ -334,16 +335,6 @@ const TeacherControl = (() => {
             $('#ctrl-dd-question-text').textContent = q.question;
             $('#ctrl-dd-answer-text').textContent = `Answer: ${q.answer}`;
 
-            if (s.timerRunning || s.timerRemaining > 0) {
-                $('#ctrl-dd-timer-display').classList.remove('hidden');
-                const pct = (s.timerRemaining / s.timerDuration) * 100;
-                $('#ctrl-dd-timer-bar').style.width = `${pct}%`;
-                $('#ctrl-dd-timer-text').textContent = s.timerRemaining;
-                $('#ctrl-dd-timer-bar').classList.toggle('warning', pct < 30);
-            } else {
-                $('#ctrl-dd-timer-display').classList.add('hidden');
-            }
-
             if (s.ddScoringVisible) {
                 $('#ctrl-dd-scoring').classList.remove('hidden');
                 renderDDTeamScoring();
@@ -360,9 +351,6 @@ const TeacherControl = (() => {
                 $('#ctrl-dd-reveal-btn').classList.remove('hidden');
                 $('#ctrl-dd-continue-btn').classList.add('hidden');
             }
-
-            $('#ctrl-dd-pause-btn').textContent = s.timerRunning ? 'Pause Timer' : 'Timer Stopped';
-            $('#ctrl-dd-pause-btn').disabled = !s.timerRunning;
         }
     }
 
@@ -403,6 +391,7 @@ const TeacherControl = (() => {
     function renderFinalControl() {
         const s = localState;
         renderControlScores();
+        $('#control-header').classList.remove('hidden');
 
         $('#board-control').classList.add('hidden');
         $('#question-control').classList.add('hidden');
@@ -423,23 +412,12 @@ const TeacherControl = (() => {
 
         if (s.finalWagerPhase) {
             $('#control-final-clue').textContent = 'Teams are placing wagers...';
-            $('#control-final-timer-display').classList.add('hidden');
             $('#control-final-scoring').classList.add('hidden');
             $('#control-final-answer').classList.add('hidden');
             $('.control-actions').querySelectorAll('.ctrl-btn').forEach(b => b.classList.add('hidden'));
         } else {
             $('#control-final-clue').textContent = s.currentQuestion?.question || '';
             $('#control-answer-text').textContent = `Answer: ${s.currentQuestion?.answer || ''}`;
-
-            if (s.timerRunning || s.timerRemaining > 0) {
-                $('#control-final-timer-display').classList.remove('hidden');
-                const pct = (s.timerRemaining / s.timerDuration) * 100;
-                $('#control-final-timer-bar').style.width = `${pct}%`;
-                $('#control-final-timer-text').textContent = s.timerRemaining;
-                $('#control-final-timer-bar').classList.toggle('warning', pct < 30);
-            } else {
-                $('#control-final-timer-display').classList.add('hidden');
-            }
 
             if (s.finalScoringVisible) {
                 $('#control-final-scoring').classList.remove('hidden');
@@ -457,21 +435,19 @@ const TeacherControl = (() => {
                 $('#ctrl-final-reveal-btn').classList.remove('hidden');
                 $('#ctrl-final-continue-btn').classList.add('hidden');
             }
-
-            $('#ctrl-final-pause-btn').textContent = s.timerRunning ? 'Pause Timer' : 'Timer Stopped';
-            $('#ctrl-final-pause-btn').disabled = !s.timerRunning;
         }
     }
 
     function renderResultsControl() {
         const s = localState;
-        renderControlScores();
 
         $('#board-control').classList.add('hidden');
         $('#question-control').classList.add('hidden');
         $('#final-control').classList.add('hidden');
         $('#results-control').classList.remove('hidden');
         $('#dd-control').classList.add('hidden');
+
+        $('#control-header').classList.add('hidden');
 
         $('#control-winner').textContent = s.winner || 'Game Over!';
         $('#control-final-scores').innerHTML = (s.finalScores || []).map(team => `
@@ -503,6 +479,9 @@ const TeacherControl = (() => {
         },
         playAgain() {
             sendCommand('PLAY_AGAIN');
+        },
+        skipRound() {
+            sendCommand('SKIP_ROUND');
         },
         ddSelectTeam(teamIndex) {
             sendCommand('DD_SELECT_TEAM', { teamIndex });
@@ -549,6 +528,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('ctrl-play-again-btn').addEventListener('click', () => {
         TeacherControl.playAgain();
+    });
+
+    document.getElementById('ctrl-skip-round-btn').addEventListener('click', () => {
+        TeacherControl.skipRound();
     });
 
     document.getElementById('ctrl-dd-wager-confirm-btn').addEventListener('click', () => {

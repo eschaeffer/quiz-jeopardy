@@ -16,7 +16,6 @@ const SoundEffects = (() => {
         masterGain.connect(audioCtx.destination);
 
         isInitialized = true;
-        createMuteButton();
     }
 
     function ensureAudioContext() {
@@ -174,6 +173,12 @@ const SoundEffects = (() => {
         roundTransition,
         dailyDouble,
         get isMuted() { return isMuted; },
-        get audioContext() { return audioCtx; }
+        get audioContext() { return audioCtx; },
+        createMuteButton
     };
 })();
+
+document.addEventListener('DOMContentLoaded', () => {
+    SoundEffects.init();
+    SoundEffects.createMuteButton();
+});

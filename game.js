@@ -49,6 +49,7 @@ const JeopardyGame = (() => {
         $('#reveal-final-answer-btn').addEventListener('click', revealFinalAnswer);
         $('#final-continue-btn').addEventListener('click', showResults);
         $('#play-again-btn').addEventListener('click', resetGame);
+        $('#skip-round-btn').addEventListener('click', skipRound);
         $('#timer-enabled').addEventListener('change', toggleTimerSetting);
         $('#buzzer-enabled').addEventListener('change', toggleBuzzerSetting);
         $('#copy-session-btn').addEventListener('click', copySessionLink);
@@ -249,6 +250,9 @@ const JeopardyGame = (() => {
                 if ($('#question-screen').classList.contains('active') && gameState.timerInterval) {
                     stopTimer();
                     showScoringControls();
+                } else if ($('#daily-double-screen').classList.contains('active') && gameState.timerInterval) {
+                    stopTimer();
+                    showDailyDoubleScoringControls();
                 } else if ($('#final-screen').classList.contains('active') && gameState.timerInterval) {
                     stopFinalTimer();
                     showFinalScoringControls();
@@ -260,6 +264,9 @@ const JeopardyGame = (() => {
                 } else if ($('#final-screen').classList.contains('active')) {
                     showResults();
                 }
+                break;
+            case 'SKIP_ROUND':
+                skipRound();
                 break;
             case 'SCORE_TEAM':
                 if (data.isFinal) {
@@ -351,7 +358,8 @@ const JeopardyGame = (() => {
     function generateQRCode() {
         const container = $('#qr-container');
         container.innerHTML = '';
-        const url = `${window.location.origin}${window.location.pathname.replace('index.html', '')}buzzer.html?session=${sessionId}`;
+        const basePath = window.location.href.replace('index.html', '');
+        const url = `${basePath}buzzer.html?session=${sessionId}`;
         if (typeof QRCode !== 'undefined') {
             new QRCode(container, {
                 text: url,
@@ -367,7 +375,7 @@ const JeopardyGame = (() => {
 
         const controlContainer = $('#control-qr-container');
         controlContainer.innerHTML = '';
-        const controlUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}control.html?session=${sessionId}`;
+        const controlUrl = `${basePath}control.html?session=${sessionId}`;
         if (typeof QRCode !== 'undefined') {
             new QRCode(controlContainer, {
                 text: controlUrl,
@@ -671,7 +679,25 @@ const JeopardyGame = (() => {
         renderScores();
         renderBoard();
         showScreen('board-screen');
+        updateSkipButton();
         broadcastState();
+    }
+
+    function skipRound() {
+        gameState.roundIndex++;
+        loadRound();
+    }
+
+    function updateSkipButton() {
+        const btn = $('#skip-round-btn');
+        if (!btn) return;
+        if (gameState.roundIndex < gameState.rounds.length) {
+            btn.classList.remove('hidden');
+            const isLastRound = gameState.roundIndex >= gameState.rounds.length - 1;
+            btn.textContent = isLastRound ? 'Skip to Final Showdown' : 'Skip to Next Round';
+        } else {
+            btn.classList.add('hidden');
+        }
     }
 
     function renderScores() {
@@ -694,7 +720,8 @@ const JeopardyGame = (() => {
 
         let html = '';
 
-        for (const cat of round.categories) {
+        for (let c = 0; c < numCategories; c++) {
+            const cat = round.categories[c];
             html += `<div class="category-header cat-${c}">${cat.name}</div>`;
         }
 
@@ -739,7 +766,7 @@ const JeopardyGame = (() => {
             isDailyDouble: question.isDailyDouble || question.isBonusQuestion || false
         };
 
-        if (question.isDailyDouble) {
+        if (gameState.currentQuestion.isDailyDouble) {
             showDailyDoubleScreen();
         } else {
             showQuestionScreen();
@@ -839,6 +866,7 @@ const JeopardyGame = (() => {
         } else {
             $('#dd-timer-display').classList.add('hidden');
         }
+        broadcastState();
     }
 
     function showDailyDoubleScoringControls() {
@@ -1065,6 +1093,7 @@ const JeopardyGame = (() => {
         }
 
         showScreen('final-screen');
+        broadcastState();
     }
 
     function revealFinalClue() {
@@ -1198,6 +1227,11 @@ const JeopardyGame = (() => {
         $('#start-btn').disabled = true;
         $('#file-name').textContent = 'No file selected';
         $('#data-file').value = '';
+
+        const teamsContainer = $('#teams-container');
+        teamsContainer.innerHTML = '';
+        addTeam();
+        addTeam();
     }
 
     function startTimer() {
