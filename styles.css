@@ -758,6 +758,16 @@ body {
     margin-top: 1.5rem;
     padding-top: 1rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.qr-row {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.qr-col {
     text-align: center;
 }
 
@@ -797,6 +807,78 @@ body {
 
 #qr-container img {
     display: block;
+}
+
+.qr-clickable {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.qr-clickable:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 12px rgba(108,60,225,0.4);
+}
+
+.qr-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-overlay-content {
+    background: var(--cts-surface-light);
+    border: 2px solid var(--cts-primary);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+}
+
+.qr-overlay-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    background: transparent;
+    border: none;
+    color: var(--cts-text-muted);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.qr-overlay-close:hover {
+    color: var(--cts-text);
+}
+
+#qr-overlay-title {
+    color: var(--cts-accent);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+}
+
+#qr-overlay-qr {
+    display: inline-block;
+    padding: 1rem;
+    background: var(--cts-white);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+}
+
+#qr-overlay-qr img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+#qr-overlay-link {
+    display: inline-block;
 }
 
 .qr-hint {

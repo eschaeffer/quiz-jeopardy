@@ -370,7 +370,6 @@ const JeopardyGame = (() => {
                 correctLevel: QRCode.CorrectLevel.M
             });
             $('#qr-section').classList.remove('hidden');
-            $('#buzzer-qr-link').href = url;
         }
 
         const controlContainer = $('#control-qr-container');
@@ -385,9 +384,49 @@ const JeopardyGame = (() => {
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.M
             });
-            $('#control-qr-section').classList.remove('hidden');
-            $('#control-qr-link').href = controlUrl;
+            $('#qr-section').classList.remove('hidden');
         }
+
+        setupQROverlay(url, controlUrl);
+    }
+
+    function setupQROverlay(buzzerUrl, controlUrl) {
+        const overlay = $('#qr-overlay');
+        const closeBtn = $('#qr-overlay-close');
+
+        closeBtn.addEventListener('click', () => {
+            overlay.classList.add('hidden');
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.add('hidden');
+        });
+
+        $('#qr-container').addEventListener('click', () => {
+            showQROverlay('Student Buzzer QR Code', buzzerUrl);
+        });
+
+        $('#control-qr-container').addEventListener('click', () => {
+            showQROverlay('Teacher Mobile Control QR Code', controlUrl);
+        });
+    }
+
+    function showQROverlay(title, url) {
+        const overlay = $('#qr-overlay');
+        $('#qr-overlay-title').textContent = title;
+        $('#qr-overlay-qr').innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+            new QRCode($('#qr-overlay-qr'), {
+                text: url,
+                width: 300,
+                height: 300,
+                colorDark: '#000555',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+        $('#qr-overlay-link').href = url;
+        overlay.classList.remove('hidden');
     }
 
     function openQuestionForBuzzers() {
@@ -647,7 +686,7 @@ const JeopardyGame = (() => {
     }
 
     function startGame() {
-        const teamInputs = $$('.team-name');
+        const teamInputs = $$('#teams-container .team-name');
         gameState.teams = Array.from(teamInputs).map(input => ({
             name: input.value || 'Unnamed Team',
             score: 0
@@ -1108,11 +1147,13 @@ const JeopardyGame = (() => {
         $('#final-clue-section').classList.remove('hidden');
         $('#final-scoring-section').classList.add('hidden');
         $('#final-answer-container').classList.add('hidden');
-        $('#reveal-final-answer-btn').classList.add('hidden');
-        $('#final-continue-btn').classList.add('hidden');
+        $('#reveal-final-answer-btn').classList.remove('hidden');
+        $('#final-continue-btn').classList.remove('hidden');
 
         if (gameState.timerEnabled) {
             startFinalTimer();
+        } else {
+            showFinalScoringControls();
         }
     }
 

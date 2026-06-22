@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classroom Trivia Showdown</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="license.css">
 </head>
 <body>
     <div id="app">
@@ -63,15 +64,29 @@
                     </div>
                 </div>
                 <div id="qr-section" class="hidden">
-                    <h4>Student Buzzer QR Code</h4>
-                    <a id="buzzer-qr-link" href="#" target="_blank"><div id="qr-container"></div></a>
-                    <p class="qr-hint">Scan or click to join this session</p>
+                    <div class="qr-row">
+                        <div class="qr-col">
+                            <h4>Student Buzzer QR Code</h4>
+                            <div id="qr-container" class="qr-clickable"></div>
+                            <p class="qr-hint">Click to enlarge</p>
+                        </div>
+                        <div class="qr-col">
+                            <h4>Teacher Mobile Control QR Code</h4>
+                            <div id="control-qr-container" class="qr-clickable"></div>
+                            <p class="qr-hint">Click to enlarge</p>
+                        </div>
+                    </div>
                 </div>
-                <div id="control-qr-section" class="hidden">
-                    <h4>Teacher Mobile Control QR Code</h4>
-                    <a id="control-qr-link" href="#" target="_blank"><div id="control-qr-container"></div></a>
-                    <p class="qr-hint">Scan or click to control the game</p>
-                </div>
+
+        <!-- QR Enlarge Overlay -->
+        <div id="qr-overlay" class="qr-overlay hidden">
+            <div class="qr-overlay-content">
+                <button id="qr-overlay-close" class="qr-overlay-close">&times;</button>
+                <h3 id="qr-overlay-title"></h3>
+                <div id="qr-overlay-qr"></div>
+                <a id="qr-overlay-link" href="#" target="_blank" class="btn small secondary">Open in New Tab</a>
+            </div>
+        </div>
                 <button id="start-btn" class="btn primary" disabled>Start Game</button>
             </div>
         </div>
@@ -189,6 +204,14 @@
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="sound-effects.js"></script>
+    <script src="license.js"></script>
+    <script src="ai-quiz.js"></script>
     <script src="game.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            LicenseManager.init();
+            AIQuizGenerator.init();
+        });
+    </script>
 </body>
 </html>
