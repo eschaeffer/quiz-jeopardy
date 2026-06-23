@@ -1,0 +1,350 @@
+/* Question Review UI */
+.review-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-overlay.hidden {
+    display: none !important;
+}
+
+.review-content {
+    background: var(--cts-surface-light);
+    border: 2px solid var(--cts-primary);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 700px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+}
+
+.review-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.review-header h2 {
+    color: var(--cts-accent);
+    font-size: 1.6rem;
+    margin-bottom: 0.25rem;
+    font-family: var(--font-heading);
+}
+
+.review-header p {
+    color: var(--cts-text-muted);
+    font-size: 0.85rem;
+}
+
+/* Category Navigation */
+.review-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.review-nav-btn {
+    background: var(--cts-primary);
+    border: none;
+    color: var(--cts-white);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+
+.review-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.review-nav-btn:not(:disabled):hover {
+    background: var(--cts-primary-light);
+}
+
+.review-category-name {
+    color: var(--cts-text);
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    min-width: 150px;
+    text-align: center;
+}
+
+.review-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.review-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--cts-surface-lighter);
+    transition: background 0.2s;
+}
+
+.review-dot.active {
+    background: var(--cts-accent);
+}
+
+/* Question Cards */
+.review-questions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.review-question-card {
+    background: var(--cts-surface);
+    border: 1px solid var(--cts-surface-lighter);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: opacity 0.2s;
+}
+
+.review-question-card.removed {
+    opacity: 0.4;
+}
+
+.review-question-card.removed .review-q-text {
+    text-decoration: line-through;
+}
+
+.review-q-value {
+    color: var(--cts-accent);
+    font-weight: 800;
+    font-size: 1rem;
+    min-width: 45px;
+    text-align: right;
+}
+
+.review-q-text {
+    flex: 1;
+    color: var(--cts-text);
+    font-size: 0.95rem;
+    line-height: 1.3;
+}
+
+.review-q-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.review-confidence {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    min-width: 36px;
+    text-align: center;
+}
+
+.review-confidence.high {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--cts-correct);
+}
+
+.review-confidence.medium {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--cts-warning);
+}
+
+.review-confidence.low {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--cts-wrong);
+}
+
+.review-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--cts-text-muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.review-remove-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--cts-wrong);
+}
+
+.review-undo-btn {
+    background: transparent;
+    border: none;
+    color: var(--cts-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.review-undo-btn:hover {
+    background: rgba(0, 180, 216, 0.2);
+}
+
+/* Bottom Bar */
+.review-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cts-surface-lighter);
+}
+
+.review-bottom-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.review-undo-all-btn {
+    background: var(--cts-surface);
+    border: 1px solid var(--cts-primary);
+    color: var(--cts-text);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.review-undo-all-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.review-undo-all-btn:not(:disabled):hover {
+    background: var(--cts-primary);
+}
+
+.review-count {
+    color: var(--cts-text-muted);
+    font-size: 0.85rem;
+}
+
+.review-count.warning {
+    color: var(--cts-wrong);
+}
+
+.review-count.ok {
+    color: var(--cts-correct);
+}
+
+.review-bottom-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.review-yolo-btn {
+    background: transparent;
+    border: 1px solid var(--cts-text-muted);
+    color: var(--cts-text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.review-yolo-btn:hover {
+    border-color: var(--cts-wrong);
+    color: var(--cts-wrong);
+}
+
+.review-start-btn {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.95rem;
+}
+
+.review-start-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* YOLO Modal */
+.yolo-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.yolo-modal-overlay.hidden {
+    display: none !important;
+}
+
+.yolo-modal-content {
+    background: var(--cts-surface-light);
+    border: 2px solid var(--cts-wrong);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.yolo-modal-content h3 {
+    color: var(--cts-wrong);
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    font-family: var(--font-heading);
+}
+
+.yolo-modal-content p {
+    color: var(--cts-text);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.yolo-modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.yolo-modal-buttons .btn {
+    min-width: 120px;
+}

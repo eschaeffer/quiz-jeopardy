@@ -131,45 +131,18 @@ const AIQuizGenerator = (() => {
             }
 
             const quiz = await response.json();
-            const cats = quiz.categories;
-            const catsPerRound = parseInt(catSlider.value);
-
-            const buildRound = (name, categories, multiplier) => ({
-                name,
-                categories: categories.map(cat => ({
-                    name: cat.name,
-                    questions: cat.questions.map((q, j) => ({
-                        value: (j + 1) * multiplier,
-                        question: q.question,
-                        answer: q.answer,
-                    })),
-                })),
-            });
-
-            const data = {
-                rounds: [
-                    buildRound('Round 1', cats, 200),
-                    buildRound('Round 2', cats, 400),
-                ],
-                finalShowdown: {
-                    category: quiz.finalCategory || topic,
-                    clue: quiz.finalClue || `A final question about ${topic}.`,
-                    answer: quiz.finalAnswer || 'See instructor notes.',
-                },
-            };
+            const qPerCat = parseInt(qpcSlider.value);
 
             closeModal();
 
-            if (typeof JeopardyGame !== 'undefined' && JeopardyGame.validateAndStoreData) {
-                JeopardyGame.validateAndStoreData(data);
-                const fileNameEl = document.getElementById('file-name');
-                if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
-            } else {
-                console.error('JeopardyGame.validateAndStoreData not available');
-                window.dispatchEvent(new CustomEvent('quiz-data-ready', { detail: data }));
-                const fileNameEl = document.getElementById('file-name');
-                if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
-            }
+            QuestionReview.startReview(quiz, qPerCat, (trimmedData) => {
+                QuestionReview.hideReview();
+                if (typeof JeopardyGame !== 'undefined' && JeopardyGame.validateAndStoreData) {
+                    JeopardyGame.validateAndStoreData(trimmedData);
+                    const fileNameEl = document.getElementById('file-name');
+                    if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
+                }
+            });
         } catch (e) {
             errorEl.textContent = e.message || 'Could not generate quiz. Check your connection.';
             const retryBtn = document.createElement('button');

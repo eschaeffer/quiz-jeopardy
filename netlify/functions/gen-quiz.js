@@ -19,6 +19,7 @@ exports.handler = async (event) => {
   }
 
   const { topic, categories, questionsPerCategory } = JSON.parse(event.body);
+  const doubleQ = questionsPerCategory * 2;
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -35,7 +36,21 @@ exports.handler = async (event) => {
         },
         {
           role: 'user',
-          content: `Generate a trivia quiz about "${topic}" with ${categories} categories and ${questionsPerCategory} questions per category. Return as JSON with this exact structure: { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "..." }] }], "finalCategory": "...", "finalClue": "...", "finalAnswer": "..." }`
+          content: `Generate a trivia quiz about "${topic}" with ${categories} categories and ${doubleQ} questions per category for EACH of two rounds. Round 1 and Round 2 must have completely different categories and different questions.
+
+For each question, include a confidence score from 0.0 to 1.0 indicating how factually accurate you believe the question and answer pair is. Common well-known facts should be 0.8-1.0. Obscure or potentially ambiguous facts should be lower.
+
+Return as JSON with this exact structure:
+{
+  "round1": { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "...", "confidence": 0.9 }] }] },
+  "round2": { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "...", "confidence": 0.85 }] }] },
+  "finalCategory": "...",
+  "finalClue": "...",
+  "finalAnswer": "...",
+  "finalConfidence": 0.85
+}
+
+Important: Generate exactly ${doubleQ} questions per category.`
         }
       ],
       temperature: 0.7,
