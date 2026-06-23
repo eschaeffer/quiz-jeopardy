@@ -50,6 +50,7 @@ const JeopardyGame = (() => {
         $('#final-continue-btn').addEventListener('click', showResults);
         $('#play-again-btn').addEventListener('click', resetGame);
         $('#skip-round-btn').addEventListener('click', skipRound);
+        $('#skip-final-btn').addEventListener('click', skipFinalShowdown);
         $('#timer-enabled').addEventListener('change', toggleTimerSetting);
         $('#buzzer-enabled').addEventListener('change', toggleBuzzerSetting);
         $('#copy-session-btn').addEventListener('click', copySessionLink);
@@ -725,6 +726,11 @@ const JeopardyGame = (() => {
     function skipRound() {
         gameState.roundIndex++;
         loadRound();
+    }
+
+    function skipFinalShowdown() {
+        showResults();
+        broadcastState();
     }
 
     function updateSkipButton() {

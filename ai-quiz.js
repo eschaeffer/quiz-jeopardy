@@ -29,7 +29,7 @@ const AIQuizGenerator = (() => {
                     <input type="text" id="ai-topic" placeholder="e.g. World War II, Biology, Math">
                 </div>
                 <div class="ai-modal-field">
-                    <label>Categories: <span id="ai-cat-display">5</span></label>
+                    <label>Categories per round: <span id="ai-cat-display">5</span></label>
                     <input type="range" id="ai-cat-slider" min="3" max="6" value="5">
                 </div>
                 <div class="ai-modal-field">
@@ -132,9 +132,7 @@ const AIQuizGenerator = (() => {
 
             const quiz = await response.json();
             const cats = quiz.categories;
-            const half = Math.ceil(cats.length / 2);
-            const round1Cats = cats.slice(0, half);
-            const round2Cats = cats.slice(half);
+            const catsPerRound = parseInt(catSlider.value);
 
             const buildRound = (name, categories, multiplier) => ({
                 name,
@@ -150,8 +148,8 @@ const AIQuizGenerator = (() => {
 
             const data = {
                 rounds: [
-                    buildRound('Round 1', round1Cats, 200),
-                    buildRound('Round 2', round2Cats, 400),
+                    buildRound('Round 1', cats, 200),
+                    buildRound('Round 2', cats, 400),
                 ],
                 finalShowdown: {
                     category: quiz.finalCategory || topic,
