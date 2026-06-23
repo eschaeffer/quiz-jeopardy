@@ -1388,6 +1388,7 @@ const JeopardyGame = (() => {
 
     return {
         init,
+        validateAndStoreData,
         scoreTeam,
         scoreFinalTeam,
         scoreDailyDouble,

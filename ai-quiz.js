@@ -106,6 +106,11 @@ const AIQuizGenerator = (() => {
             return;
         }
 
+        if (window.location.protocol === 'file:') {
+            errorEl.textContent = 'AI quiz generation requires a deployed site. Please test on Netlify.';
+            return;
+        }
+
         setLoading(true);
         errorEl.textContent = '';
 
@@ -126,18 +131,33 @@ const AIQuizGenerator = (() => {
             }
 
             const quiz = await response.json();
-            const data = {
-                rounds: [{
-                    name: 'Round 1',
-                    categories: quiz.categories.map((cat, i) => ({
-                        name: cat.name,
-                        questions: cat.questions.map((q, j) => ({
-                            value: (j + 1) * 200,
-                            question: q.question,
-                            answer: q.answer,
-                        })),
+            const cats = quiz.categories;
+            const half = Math.ceil(cats.length / 2);
+            const round1Cats = cats.slice(0, half);
+            const round2Cats = cats.slice(half);
+
+            const buildRound = (name, categories, multiplier) => ({
+                name,
+                categories: categories.map(cat => ({
+                    name: cat.name,
+                    questions: cat.questions.map((q, j) => ({
+                        value: (j + 1) * multiplier,
+                        question: q.question,
+                        answer: q.answer,
                     })),
-                }],
+                })),
+            });
+
+            const data = {
+                rounds: [
+                    buildRound('Round 1', round1Cats, 200),
+                    buildRound('Round 2', round2Cats, 400),
+                ],
+                finalShowdown: {
+                    category: quiz.finalCategory || topic,
+                    clue: quiz.finalClue || `A final question about ${topic}.`,
+                    answer: quiz.finalAnswer || 'See instructor notes.',
+                },
             };
 
             closeModal();
@@ -147,6 +167,7 @@ const AIQuizGenerator = (() => {
                 const fileNameEl = document.getElementById('file-name');
                 if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
             } else {
+                console.error('JeopardyGame.validateAndStoreData not available');
                 window.dispatchEvent(new CustomEvent('quiz-data-ready', { detail: data }));
                 const fileNameEl = document.getElementById('file-name');
                 if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;

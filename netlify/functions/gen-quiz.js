@@ -35,7 +35,7 @@ exports.handler = async (event) => {
         },
         {
           role: 'user',
-          content: `Generate a trivia quiz about "${topic}" with ${categories} categories and ${questionsPerCategory} questions per category. Return as JSON: { "categories": [{ "name": "...", "questions": [{ "value": 100, "question": "...", "answer": "..." }] }] }`
+          content: `Generate a trivia quiz about "${topic}" with ${categories} categories and ${questionsPerCategory} questions per category. Return as JSON with this exact structure: { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "..." }] }], "finalCategory": "...", "finalClue": "...", "finalAnswer": "..." }`
         }
       ],
       temperature: 0.7,
