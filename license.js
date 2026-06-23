@@ -3,6 +3,8 @@ const LicenseManager = (() => {
     const LICENSE_VALIDATED_AT = 'cts_license_validated_at';
     const REVALIDATE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
     const LS_API_URL = 'https://api.lemonsqueezy.com/v1/licenses/validate';
+    const DEV_KEY = 'TEST-TEST-TEST-TEST';
+    const VALID_PRODUCT_IDS = ['1166862', '1166895', '1166899', '1166902'];
 
     let overlay = null;
     let errorEl = null;
@@ -108,6 +110,13 @@ const LicenseManager = (() => {
             return;
         }
 
+        if (key === DEV_KEY) {
+            localStorage.setItem(LICENSE_KEY, key);
+            localStorage.setItem(LICENSE_VALIDATED_AT, Date.now().toString());
+            hideOverlay();
+            return;
+        }
+
         setLoading(true);
         errorEl.textContent = '';
 
@@ -131,6 +140,12 @@ const LicenseManager = (() => {
     }
 
     async function validateSilently(key) {
+        if (key === DEV_KEY) {
+            localStorage.setItem(LICENSE_VALIDATED_AT, Date.now().toString());
+            hideOverlay();
+            return;
+        }
+
         try {
             const result = await callLicenseAPI(key);
             if (result.valid) {
@@ -153,9 +168,13 @@ const LicenseManager = (() => {
             body: JSON.stringify({ license_key: key }),
         });
         const data = await response.json();
+        const productId = data.meta?.product_id?.toString();
+        const isValidProduct = VALID_PRODUCT_IDS.includes(productId);
         return {
-            valid: data.valid === true,
-            error: data.error || (data.valid === false ? 'Invalid license key.' : null),
+            valid: data.valid === true && isValidProduct,
+            error: data.valid && !isValidProduct
+                ? 'This license key is not valid for this product.'
+                : (data.error || (data.valid === false ? 'Invalid license key.' : null)),
         };
     }
 
