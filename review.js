@@ -177,6 +177,8 @@ const QuestionReview = (() => {
         };
     }
 
+    const CAT_COLORS = ['#6C3CE1', '#E5553A', '#00B4D8', '#F59E0B', '#10B981', '#EC4899'];
+
     function getConfidenceClass(confidence) {
         if (confidence >= 0.8) return 'high';
         if (confidence >= 0.5) return 'medium';
@@ -210,11 +212,12 @@ const QuestionReview = (() => {
                 const confClass = getConfidenceClass(q.confidence || 0.8);
                 const confLabel = q.confidence ? Math.round(q.confidence * 100) + '%' : '';
                 const value = (qIdx + 1) * (reviewState.currentRoundIndex === 0 ? 200 : 400);
+                const catColor = CAT_COLORS[catIdx % CAT_COLORS.length];
 
                 allCardsHtml += `
-                    <div class="review-question-card ${isRemoved ? 'removed' : ''}">
+                    <div class="review-question-card ${isRemoved ? 'removed' : ''}" style="border-left: 4px solid ${catColor};">
                         <span class="review-q-value">$${value}</span>
-                        <span class="review-q-text">${q.question}</span>
+                        <span class="review-q-text"><span style="color:${catColor};font-weight:600;">[${cat.name}]</span> ${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
                         <span class="review-q-right">
                             <span class="review-confidence ${confClass}">${confLabel}</span>
                             ${isRemoved
