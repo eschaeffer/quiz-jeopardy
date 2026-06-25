@@ -10,9 +10,13 @@ const AIQuizGenerator = (() => {
     let generateBtn = null;
     let errorEl = null;
     let loadingEl = null;
+    let errorDebugBtn = null;
+    let lastError = null;
+    let debugModal = null;
 
     function init() {
         createModal();
+        createDebugModal();
         wireUpButton();
     }
 
@@ -41,6 +45,7 @@ const AIQuizGenerator = (() => {
                     <span class="license-spinner"></span> Generating quiz...
                 </div>
                 <div id="ai-error" class="license-error"></div>
+                <button id="ai-debug-btn" class="license-retry" style="display:none;">Copy Debug Info</button>
             </div>
         `;
         document.getElementById('app').appendChild(modal);
@@ -53,6 +58,7 @@ const AIQuizGenerator = (() => {
         generateBtn = modal.querySelector('#ai-generate-btn');
         errorEl = modal.querySelector('#ai-error');
         loadingEl = modal.querySelector('#ai-loading');
+        errorDebugBtn = modal.querySelector('#ai-debug-btn');
 
         catSlider.addEventListener('input', () => { catDisplay.textContent = catSlider.value; });
         qpcSlider.addEventListener('input', () => { qpcDisplay.textContent = qpcSlider.value; });
@@ -61,6 +67,74 @@ const AIQuizGenerator = (() => {
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         generateBtn.addEventListener('click', generateQuiz);
         topicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') generateQuiz(); });
+        errorDebugBtn.addEventListener('click', showDebugModal);
+    }
+
+    function createDebugModal() {
+        debugModal = document.createElement('div');
+        debugModal.className = 'yolo-modal-overlay hidden';
+        debugModal.innerHTML = `
+            <div class="yolo-modal-content">
+                <h3>Copy Debug Info</h3>
+                <p>Choose what to copy to your clipboard:</p>
+                <div class="yolo-modal-buttons">
+                    <button class="btn secondary" id="debug-copy-summary">Copy Summary</button>
+                    <button class="btn primary" id="debug-copy-full">Copy Full Details</button>
+                </div>
+                <button class="license-retry" id="debug-close-btn" style="margin-top:1rem;">Close</button>
+            </div>
+        `;
+        document.getElementById('app').appendChild(debugModal);
+
+        debugModal.querySelector('#debug-close-btn').addEventListener('click', hideDebugModal);
+        debugModal.querySelector('#debug-copy-summary').addEventListener('click', () => copyDebugInfo('summary'));
+        debugModal.querySelector('#debug-copy-full').addEventListener('click', () => copyDebugInfo('full'));
+    }
+
+    function showDebugModal() {
+        debugModal.classList.remove('hidden');
+    }
+
+    function hideDebugModal() {
+        debugModal.classList.add('hidden');
+    }
+
+    function copyDebugInfo(mode) {
+        if (!lastError) return;
+
+        let text;
+        if (mode === 'summary') {
+            text = `Quiz generation failed: ${lastError.message} (Code: ${lastError.code}, Status: ${lastError.status})`;
+        } else {
+            text = `=== Classroom Trivia Showdown - Debug Info ===
+Timestamp: ${new Date().toISOString()}
+Topic: ${topicInput?.value || 'unknown'}
+Categories: ${catSlider?.value || 'unknown'}
+Questions per category: ${qpcSlider?.value || 'unknown'}
+Model: openai/gpt-4o
+
+--- Error ---
+Status: ${lastError.status}
+Message: ${lastError.message}
+Code: ${lastError.code}
+Type: ${lastError.type}
+Request ID: ${lastError.requestId}
+
+--- Rate Limits ---
+Requests remaining: ${lastError.rateLimitRemaining || 'N/A'}
+Tokens remaining: ${lastError.tokenLimitRemaining || 'N/A'}
+
+--- Environment ---
+Browser: ${navigator.userAgent}
+Platform: ${navigator.platform}`;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = debugModal.querySelector(mode === 'summary' ? '#debug-copy-summary' : '#debug-copy-full');
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = original; }, 2000);
+        });
     }
 
     function openModal() {
@@ -68,6 +142,8 @@ const AIQuizGenerator = (() => {
         topicInput.value = '';
         errorEl.textContent = '';
         loadingEl.style.display = 'none';
+        errorDebugBtn.style.display = 'none';
+        lastError = null;
         topicInput.focus();
     }
 
@@ -103,16 +179,20 @@ const AIQuizGenerator = (() => {
         const topic = topicInput.value.trim();
         if (!topic) {
             errorEl.textContent = 'Please enter a topic.';
+            errorDebugBtn.style.display = 'none';
             return;
         }
 
         if (window.location.protocol === 'file:') {
             errorEl.textContent = 'AI quiz generation requires a deployed site. Please test on Netlify.';
+            errorDebugBtn.style.display = 'none';
             return;
         }
 
         setLoading(true);
         errorEl.textContent = '';
+        errorDebugBtn.style.display = 'none';
+        lastError = null;
 
         try {
             const response = await fetch('/.netlify/functions/gen-quiz', {
@@ -127,7 +207,14 @@ const AIQuizGenerator = (() => {
 
             if (!response.ok) {
                 const err = await response.json();
-                throw new Error(err.error || 'Failed to generate quiz.');
+                if (err.error) {
+                    lastError = err;
+                    errorEl.textContent = `Quiz generation failed: ${err.message}`;
+                    errorDebugBtn.style.display = '';
+                } else {
+                    errorEl.textContent = err.message || 'Failed to generate quiz.';
+                }
+                return;
             }
 
             const quiz = await response.json();
@@ -135,16 +222,19 @@ const AIQuizGenerator = (() => {
 
             closeModal();
 
-            QuestionReview.startReview(quiz, qPerCat, (trimmedData) => {
-                QuestionReview.hideReview();
-                if (typeof JeopardyGame !== 'undefined' && JeopardyGame.validateAndStoreData) {
-                    JeopardyGame.validateAndStoreData(trimmedData);
-                    const fileNameEl = document.getElementById('file-name');
-                    if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
-                }
+            loadMathJax().then(() => {
+                QuestionReview.startReview(quiz, qPerCat, (trimmedData) => {
+                    QuestionReview.hideReview();
+                    if (typeof JeopardyGame !== 'undefined' && JeopardyGame.validateAndStoreData) {
+                        JeopardyGame.validateAndStoreData(trimmedData);
+                        const fileNameEl = document.getElementById('file-name');
+                        if (fileNameEl) fileNameEl.textContent = `AI Generated: ${topic}`;
+                    }
+                });
             });
         } catch (e) {
             errorEl.textContent = e.message || 'Could not generate quiz. Check your connection.';
+            errorDebugBtn.style.display = 'none';
             const retryBtn = document.createElement('button');
             retryBtn.className = 'license-retry';
             retryBtn.textContent = 'Retry';
@@ -153,6 +243,26 @@ const AIQuizGenerator = (() => {
         } finally {
             setLoading(false);
         }
+    }
+
+    function loadMathJax() {
+        if (window.MathJax) return Promise.resolve();
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']]
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js';
+            script.defer = true;
+            script.onload = resolve;
+            document.head.appendChild(script);
+        });
     }
 
     return { init, openModal };

@@ -103,6 +103,14 @@
     background: var(--cts-accent);
 }
 
+.review-bank-count {
+    text-align: center;
+    color: var(--cts-text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    min-height: 1.2em;
+}
+
 /* Question Cards */
 .review-questions {
     display: flex;

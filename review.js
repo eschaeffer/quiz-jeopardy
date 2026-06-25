@@ -6,6 +6,8 @@ const QuestionReview = (() => {
     let reviewState = null;
     let onConfirm = null;
 
+    const CAT_COLORS = ['#6C3CE1', '#E5553A', '#00B4D8', '#F59E0B', '#10B981', '#EC4899'];
+
     function init() {
         createReviewOverlay();
         createYoloModal();
@@ -27,6 +29,7 @@ const QuestionReview = (() => {
                 </div>
                 <div class="review-dots" id="review-dots"></div>
                 <div class="review-questions" id="review-questions"></div>
+                <div class="review-bank-count" id="review-bank-count"></div>
                 <div class="review-bottom-bar">
                     <div class="review-bottom-left">
                         <button class="review-undo-all-btn" id="review-undo-btn" disabled>Undo Last Removal</button>
@@ -83,20 +86,37 @@ const QuestionReview = (() => {
     }
 
     function startReview(aiData, requiredPerCategory, callback) {
-        reviewState = {
-            rounds: [
-                { name: 'Round 1', categories: aiData.round1?.categories || [] },
-                { name: 'Round 2', categories: aiData.round2?.categories || [] },
-            ],
-            finalShowdown: {
-                category: aiData.finalCategory || '',
-                clue: aiData.finalClue || '',
+        const r1 = aiData.round1?.categories || [];
+        const r2 = aiData.round2?.categories || [];
+
+        const pages = [];
+        r1.forEach((cat, i) => {
+            const active = cat.questions.slice(0, requiredPerCategory);
+            const bank = cat.questions.slice(requiredPerCategory);
+            pages.push({ type: 'category', roundIndex: 0, catIndex: i, name: cat.name, active, bank });
+        });
+        r2.forEach((cat, i) => {
+            const active = cat.questions.slice(0, requiredPerCategory);
+            const bank = cat.questions.slice(requiredPerCategory);
+            pages.push({ type: 'category', roundIndex: 1, catIndex: i, name: cat.name, active, bank });
+        });
+
+        pages.push({
+            type: 'final',
+            question: {
+                question: aiData.finalClue || '',
                 answer: aiData.finalAnswer || '',
                 confidence: aiData.finalConfidence || 0.8,
             },
+            name: 'Final Showdown',
+        });
+
+        reviewState = {
+            pages,
             requiredPerCategory,
-            currentRoundIndex: 0,
+            currentPageIndex: 0,
             removalHistory: [],
+            finalRemoved: false,
         };
         onConfirm = callback;
         renderReview();
@@ -111,73 +131,120 @@ const QuestionReview = (() => {
     }
 
     function navigateCategory(direction) {
-        const newIdx = reviewState.currentRoundIndex + direction;
-        if (newIdx < 0 || newIdx >= reviewState.rounds.length) return;
-        reviewState.currentRoundIndex = newIdx;
+        const newIdx = reviewState.currentPageIndex + direction;
+        if (newIdx < 0 || newIdx >= reviewState.pages.length) return;
+        reviewState.currentPageIndex = newIdx;
         renderReview();
     }
 
-    function removeQuestion(roundIndex, catIndex, qIndex) {
-        const cat = reviewState.rounds[roundIndex].categories[catIndex];
-        const q = cat.questions[qIndex];
+    function removeQuestion(pageIndex, qIndex) {
+        const page = reviewState.pages[pageIndex];
+        if (page.type === 'final') {
+            page.question.removed = true;
+            reviewState.finalRemoved = true;
+            reviewState.removalHistory.push({ pageIndex, qIndex: 0, type: 'final' });
+            renderReview();
+            return;
+        }
+
+        const q = page.active[qIndex];
         if (!q || q.removed) return;
 
-        q.removed = true;
-        reviewState.removalHistory.push({ roundIndex, catIndex, qIndex });
+        let bankQ = null;
+        if (page.bank.length > 0) {
+            bankQ = page.bank.shift();
+            page.active.splice(qIndex, 1, bankQ);
+        } else {
+            q.removed = true;
+        }
+
+        reviewState.removalHistory.push({ pageIndex, qIndex, removed: q, bankQ });
         renderReview();
     }
 
     function undoLastRemoval() {
         if (reviewState.removalHistory.length === 0) return;
         const last = reviewState.removalHistory.pop();
-        const cat = reviewState.rounds[last.roundIndex].categories[last.catIndex];
-        if (cat.questions[last.qIndex]) {
-            cat.questions[last.qIndex].removed = false;
+        const page = reviewState.pages[last.pageIndex];
+
+        if (last.type === 'final') {
+            page.question.removed = false;
+            reviewState.finalRemoved = false;
+            renderReview();
+            return;
+        }
+
+        if (last.bankQ) {
+            const bankIdx = page.active.findIndex(q => q === last.bankQ);
+            if (bankIdx >= 0) {
+                page.active.splice(bankIdx, 1, last.removed);
+                page.bank.unshift(last.bankQ);
+            }
+        } else if (page.active[last.qIndex]) {
+            page.active[last.qIndex].removed = false;
         }
         renderReview();
     }
 
-    function getRemainingCount(roundIndex, catIndex) {
-        const cat = reviewState.rounds[roundIndex].categories[catIndex];
-        return cat.questions.filter(q => !q.removed).length;
+    function getBankCount(pageIndex) {
+        const page = reviewState.pages[pageIndex];
+        return page.type === 'final' ? -1 : page.bank.length;
     }
 
     function canStartGame() {
-        for (let r = 0; r < reviewState.rounds.length; r++) {
-            for (let c = 0; c < reviewState.rounds[r].categories.length; c++) {
-                if (getRemainingCount(r, c) < reviewState.requiredPerCategory) return false;
+        for (const page of reviewState.pages) {
+            if (page.type === 'final') {
+                if (!page.question.removed) continue;
+                return false;
             }
+            const remaining = page.active.filter(q => !q.removed).length;
+            if (remaining < reviewState.requiredPerCategory) return false;
         }
         return true;
     }
 
+    function getDollarValue(pageIndex, qIndex) {
+        const page = reviewState.pages[pageIndex];
+        if (page.type === 'final') return 'Final';
+
+        const isRound2 = page.roundIndex === 1;
+        const multiplier = isRound2 ? 400 : 200;
+        return (qIndex + 1) * multiplier;
+    }
+
     function trimAndLoad() {
-        const trimmedRounds = reviewState.rounds.map((round, rIdx) => ({
-            name: round.name,
-            categories: round.categories.map(cat => ({
-                name: cat.name,
-                questions: cat.questions
+        const r1Pages = reviewState.pages.filter(p => p.type === 'category' && p.roundIndex === 0);
+        const r2Pages = reviewState.pages.filter(p => p.type === 'category' && p.roundIndex === 1);
+
+        const buildRound = (name, pages, multiplier) => ({
+            name,
+            categories: pages.map(page => ({
+                name: page.name,
+                questions: page.active
                     .filter(q => !q.removed)
                     .slice(0, reviewState.requiredPerCategory)
                     .map((q, j) => ({
-                        value: (j + 1) * (rIdx === 0 ? 200 : 400),
+                        value: (j + 1) * multiplier,
                         question: q.question,
                         answer: q.answer,
                     })),
             })),
-        }));
+        });
+
+        const finalPage = reviewState.pages.find(p => p.type === 'final');
 
         return {
-            rounds: trimmedRounds,
-            finalShowdown: {
-                category: reviewState.finalShowdown.category,
-                clue: reviewState.finalShowdown.clue,
-                answer: reviewState.finalShowdown.answer,
-            },
+            rounds: [
+                buildRound('Round 1', r1Pages, 200),
+                buildRound('Round 2', r2Pages, 400),
+            ],
+            finalShowdown: finalPage && !reviewState.finalRemoved ? {
+                category: 'Final Showdown',
+                clue: finalPage.question.question,
+                answer: finalPage.question.answer,
+            } : null,
         };
     }
-
-    const CAT_COLORS = ['#6C3CE1', '#E5553A', '#00B4D8', '#F59E0B', '#10B981', '#EC4899'];
 
     function getConfidenceClass(confidence) {
         if (confidence >= 0.8) return 'high';
@@ -186,74 +253,101 @@ const QuestionReview = (() => {
     }
 
     function renderReview() {
-        const round = reviewState.rounds[reviewState.currentRoundIndex];
-        const totalRounds = reviewState.rounds.length;
+        const page = reviewState.pages[reviewState.currentPageIndex];
+        const totalPages = reviewState.pages.length;
 
-        $('#review-cat-name').textContent = `${round.name}`;
-        $('#review-prev-btn').disabled = reviewState.currentRoundIndex === 0;
-        $('#review-next-btn').disabled = reviewState.currentRoundIndex >= totalRounds - 1;
+        $('#review-cat-name').textContent = page.name;
+        $('#review-prev-btn').disabled = reviewState.currentPageIndex === 0;
+        $('#review-next-btn').disabled = reviewState.currentPageIndex >= totalPages - 1;
 
-        const dotsHtml = reviewState.rounds.map((r, i) =>
-            `<span class="review-dot ${i === reviewState.currentRoundIndex ? 'active' : ''}"></span>`
+        const dotsHtml = reviewState.pages.map((p, i) =>
+            `<span class="review-dot ${i === reviewState.currentPageIndex ? 'active' : ''}"></span>`
         ).join('');
         $('#review-dots').innerHTML = dotsHtml;
 
-        let totalRemaining = 0;
-        let totalNeeded = 0;
+        const bankCount = getBankCount(reviewState.currentPageIndex);
+        const bankEl = $('#review-bank-count');
+        if (bankCount >= 0) {
+            bankEl.textContent = bankCount > 0 ? `Bank: ${bankCount} questions remaining` : 'No more replacements';
+            bankEl.style.display = '';
+        } else {
+            bankEl.style.display = 'none';
+        }
+
         let allCardsHtml = '';
 
-        round.categories.forEach((cat, catIdx) => {
-            const remaining = getRemainingCount(reviewState.currentRoundIndex, catIdx);
-            totalRemaining += remaining;
-            totalNeeded += reviewState.requiredPerCategory;
+        if (page.type === 'final') {
+            const q = page.question;
+            const isRemoved = q.removed;
+            const confClass = getConfidenceClass(q.confidence || 0.8);
+            const confLabel = q.confidence ? Math.round(q.confidence * 100) + '%' : '';
 
-            cat.questions.forEach((q, qIdx) => {
+            allCardsHtml = `
+                <div class="review-question-card ${isRemoved ? 'removed' : ''}" style="border-left: 4px solid var(--cts-accent);">
+                    <span class="review-q-value" style="color:var(--cts-accent);">Final</span>
+                    <span class="review-q-text">${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
+                    <span class="review-q-right">
+                        <span class="review-confidence ${confClass}">${confLabel}</span>
+                        ${isRemoved
+                            ? `<button class="review-undo-btn" onclick="QuestionReview.undoQuestion(${reviewState.currentPageIndex}, 0)">&#8617;</button>`
+                            : `<button class="review-remove-btn" onclick="QuestionReview.removeQ(${reviewState.currentPageIndex}, 0)">&times;</button>`
+                        }
+                    </span>
+                </div>
+            `;
+        } else {
+            page.active.forEach((q, qIdx) => {
                 const isRemoved = q.removed;
                 const confClass = getConfidenceClass(q.confidence || 0.8);
                 const confLabel = q.confidence ? Math.round(q.confidence * 100) + '%' : '';
-                const value = (qIdx + 1) * (reviewState.currentRoundIndex === 0 ? 200 : 400);
-                const catColor = CAT_COLORS[catIdx % CAT_COLORS.length];
+                const value = getDollarValue(reviewState.currentPageIndex, qIdx);
+                const catColor = CAT_COLORS[page.catIndex % CAT_COLORS.length];
 
                 allCardsHtml += `
                     <div class="review-question-card ${isRemoved ? 'removed' : ''}" style="border-left: 4px solid ${catColor};">
                         <span class="review-q-value">$${value}</span>
-                        <span class="review-q-text"><span style="color:${catColor};font-weight:600;">[${cat.name}]</span> ${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
+                        <span class="review-q-text"><span style="color:${catColor};font-weight:600;">[${page.name}]</span> ${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
                         <span class="review-q-right">
                             <span class="review-confidence ${confClass}">${confLabel}</span>
                             ${isRemoved
-                                ? `<button class="review-undo-btn" onclick="QuestionReview.undoQuestion(${reviewState.currentRoundIndex}, ${catIdx}, ${qIdx})">&#8617;</button>`
-                                : `<button class="review-remove-btn" onclick="QuestionReview.removeQ(${reviewState.currentRoundIndex}, ${catIdx}, ${qIdx})">&times;</button>`
+                                ? `<button class="review-undo-btn" onclick="QuestionReview.undoQuestion(${reviewState.currentPageIndex}, ${qIdx})">&#8617;</button>`
+                                : (bankCount > 0 || q.removed
+                                    ? `<button class="review-remove-btn" onclick="QuestionReview.removeQ(${reviewState.currentPageIndex}, ${qIdx})">&times;</button>`
+                                    : '')
                             }
                         </span>
                     </div>
                 `;
             });
-        });
+        }
 
         $('#review-questions').innerHTML = allCardsHtml;
 
+        if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise([$('#review-questions')]).catch(() => {});
+        }
+
         const countEl = $('#review-count');
-        countEl.textContent = `Questions: ${totalRemaining}/${totalNeeded} needed`;
-        countEl.className = `review-count ${totalRemaining >= totalNeeded ? 'ok' : 'warning'}`;
+        if (page.type === 'final') {
+            countEl.textContent = page.question.removed ? 'Removed' : 'Ready';
+            countEl.className = `review-count ${page.question.removed ? 'warning' : 'ok'}`;
+        } else {
+            const remaining = page.active.filter(q => !q.removed).length;
+            countEl.textContent = `${remaining}/${reviewState.requiredPerCategory}`;
+            countEl.className = `review-count ${remaining >= reviewState.requiredPerCategory ? 'ok' : 'warning'}`;
+        }
 
         const canStart = canStartGame();
         $('#review-start-btn').disabled = !canStart;
         $('#review-undo-btn').disabled = reviewState.removalHistory.length === 0;
     }
 
-    function removeQ(roundIdx, catIdx, qIdx) {
-        removeQuestion(roundIdx, catIdx, qIdx);
+    function removeQ(pageIdx, qIdx) {
+        removeQuestion(pageIdx, qIdx);
     }
 
-    function undoQuestion(roundIdx, catIdx, qIdx) {
-        const cat = reviewState.rounds[roundIdx].categories[catIdx];
-        if (cat.questions[qIdx]) {
-            cat.questions[qIdx].removed = false;
-            reviewState.removalHistory = reviewState.removalHistory.filter(
-                r => !(r.roundIndex === roundIdx && r.catIndex === catIdx && r.qIndex === qIdx)
-            );
-        }
-        renderReview();
+    function undoQuestion(pageIdx, qIdx) {
+        undoLastRemoval();
     }
 
     return {

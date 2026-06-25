@@ -40,6 +40,12 @@ exports.handler = async (event) => {
 
 For each question, include a confidence score from 0.0 to 1.0 indicating how factually accurate you believe the question and answer pair is. Common well-known facts should be 0.8-1.0. Obscure or potentially ambiguous facts should be lower.
 
+For math questions, use LaTeX notation:
+- Inline math: \\(equation\\)
+- Display math: \\[equation\\]
+Examples: "What is the solution to \\(x^2 - 4 = 0\\)?" Answer: "\\(x = \\pm 2\\)"
+Non-math questions should NOT use LaTeX notation.
+
 Return as JSON with this exact structure:
 {
   "round1": { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "...", "confidence": 0.9 }] }] },
@@ -58,10 +64,29 @@ Important: Generate exactly ${doubleQ} questions per category.`
   });
 
   if (!response.ok) {
-    const err = await response.text();
+    let errorData = {};
+    try {
+      errorData = await response.json();
+    } catch (e) {}
+
+    const errorResponse = {
+      error: true,
+      status: response.status,
+      message: errorData.error?.message || response.statusText || 'Unknown error',
+      code: errorData.error?.code || 'UNKNOWN',
+      type: errorData.error?.type || 'unknown',
+      requestId: response.headers.get('x-request-id') || 'none',
+      rateLimitRemaining: response.headers.get('x-rate-limit-requests-remaining'),
+      tokenLimitRemaining: response.headers.get('x-rate-limit-tokens-remaining'),
+    };
+
     return {
       statusCode: response.status,
-      body: JSON.stringify({ error: 'OpenRouter API error', details: err }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(errorResponse),
     };
   }
 
@@ -75,12 +100,28 @@ Important: Generate exactly ${doubleQ} questions per category.`
     const quiz = JSON.parse(content);
     return {
       statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(quiz),
     };
   } catch (e) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to parse quiz JSON', raw: data.choices[0].message.content }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        error: true,
+        status: 500,
+        message: 'Failed to parse quiz JSON',
+        code: 'PARSE_ERROR',
+        type: 'parse_error',
+        requestId: 'none',
+        raw: data.choices?.[0]?.message?.content?.substring(0, 500),
+      }),
     };
   }
 };
