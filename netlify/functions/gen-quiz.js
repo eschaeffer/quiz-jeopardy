@@ -60,6 +60,7 @@ Important: Generate exactly ${doubleQ} questions per category.`
         }
       ],
       temperature: 0.7,
+      max_tokens: 8192,
     }),
   });
 
