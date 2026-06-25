@@ -60,7 +60,7 @@ Important: Generate exactly ${doubleQ} questions per category.`
         }
       ],
       temperature: 0.7,
-      max_tokens: 16384,
+      max_tokens: 32768,
     }),
   });
 
@@ -98,7 +98,12 @@ Important: Generate exactly ${doubleQ} questions per category.`
     if (content.startsWith('```')) {
       content = content.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
     }
-    // Fix truncated JSON: close any unclosed braces/brackets
+    // Fix truncated JSON:
+    // 1. Close unclosed string
+    if (!content.endsWith('"') && (content.match(/"/g) || []).length % 2 !== 0) {
+      content += '"';
+    }
+    // 2. Close unclosed braces/brackets
     const openBraces = (content.match(/{/g) || []).length;
     const closeBraces = (content.match(/}/g) || []).length;
     const openBrackets = (content.match(/\[/g) || []).length;
