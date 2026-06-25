@@ -323,10 +323,6 @@ const QuestionReview = (() => {
 
         $('#review-questions').innerHTML = allCardsHtml;
 
-        if (window.MathJax && MathJax.typesetPromise) {
-            MathJax.typesetPromise([$('#review-questions')]).catch(() => {});
-        }
-
         const countEl = $('#review-count');
         if (page.type === 'final') {
             countEl.textContent = page.question.removed ? 'Removed' : 'Ready';

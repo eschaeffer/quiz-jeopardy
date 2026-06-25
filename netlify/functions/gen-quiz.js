@@ -40,12 +40,6 @@ exports.handler = async (event) => {
 
 For each question, include a confidence score from 0.0 to 1.0 indicating how factually accurate you believe the question and answer pair is. Common well-known facts should be 0.8-1.0. Obscure or potentially ambiguous facts should be lower.
 
-For math questions, use LaTeX notation with DOUBLE backslashes so the JSON remains valid:
-- Inline math: \\\\(equation\\\\)
-- Display math: \\\\[equation\\\\]
-Examples: "What is the solution to \\\\(x^2 - 4 = 0\\\\)?" Answer: "\\\\(x = \\\\pm 2\\\\)"
-Non-math questions should NOT use LaTeX notation.
-
 Return as JSON with this exact structure:
 {
   "round1": { "categories": [{ "name": "...", "questions": [{ "question": "...", "answer": "...", "confidence": 0.9 }] }] },

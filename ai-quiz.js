@@ -216,8 +216,7 @@ Platform: ${navigator.platform}`;
 
             closeModal();
 
-            loadMathJax().then(() => {
-                QuestionReview.startReview(quiz, qPerCat, (trimmedData) => {
+            QuestionReview.startReview(quiz, qPerCat, (trimmedData) => {
                     QuestionReview.hideReview();
                     if (typeof JeopardyGame !== 'undefined' && JeopardyGame.validateAndStoreData) {
                         JeopardyGame.validateAndStoreData(trimmedData);
