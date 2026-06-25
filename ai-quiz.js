@@ -111,7 +111,7 @@ Timestamp: ${new Date().toISOString()}
 Topic: ${topicInput?.value || 'unknown'}
 Categories: ${catSlider?.value || 'unknown'}
 Questions per category: ${qpcSlider?.value || 'unknown'}
-Model: openai/gpt-4o
+Model: openrouter/auto
 
 --- Error ---
 Status: ${lastError.status}
@@ -179,12 +179,6 @@ Platform: ${navigator.platform}`;
         const topic = topicInput.value.trim();
         if (!topic) {
             errorEl.textContent = 'Please enter a topic.';
-            errorDebugBtn.style.display = 'none';
-            return;
-        }
-
-        if (window.location.protocol === 'file:') {
-            errorEl.textContent = 'AI quiz generation requires a deployed site. Please test on Netlify.';
             errorDebugBtn.style.display = 'none';
             return;
         }

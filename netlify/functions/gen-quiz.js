@@ -28,7 +28,7 @@ exports.handler = async (event) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'openai/gpt-4o',
+      model: 'openrouter/auto',
       messages: [
         {
           role: 'system',
