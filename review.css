@@ -42,6 +42,12 @@
     font-size: 0.85rem;
 }
 
+.review-header .review-curriculum-note {
+    color: var(--cts-accent);
+    font-size: 0.78rem;
+    margin-top: 0.5rem;
+}
+
 /* Category Navigation */
 .review-nav {
     display: flex;
@@ -130,6 +136,27 @@
     align-items: center;
     gap: 0.75rem;
     transition: opacity 0.2s;
+}
+
+.review-question-card.fade-out {
+    opacity: 0;
+}
+
+.review-question-card.fade-in {
+    animation: reviewFadeIn 0.22s ease-out;
+}
+
+@keyframes reviewFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .review-question-card,
+    .review-question-card.fade-in {
+        animation: none;
+        transition: none;
+    }
 }
 
 .review-question-card.removed {
@@ -242,7 +269,8 @@
     gap: 0.75rem;
 }
 
-.review-undo-all-btn {
+.review-undo-all-btn,
+.review-revert-btn {
     background: var(--cts-surface);
     border: 1px solid var(--cts-primary);
     color: var(--cts-text);
@@ -253,13 +281,20 @@
     transition: all 0.2s;
 }
 
-.review-undo-all-btn:disabled {
+.review-undo-all-btn:disabled,
+.review-revert-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
 
-.review-undo-all-btn:not(:disabled):hover {
+.review-undo-all-btn:not(:disabled):hover,
+.review-revert-btn:not(:disabled):hover {
     background: var(--cts-primary);
+}
+
+.review-revert-btn {
+    border-color: var(--cts-text-muted);
+    color: var(--cts-text-muted);
 }
 
 .review-count {

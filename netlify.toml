@@ -3,3 +3,5 @@
   publish = "."
   functions = "netlify/functions"
 
+[functions."gen-quiz"]
+  timeout = 60

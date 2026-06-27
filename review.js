@@ -21,6 +21,7 @@ const QuestionReview = (() => {
                 <div class="review-header">
                     <h2>Review Questions</h2>
                     <p>Remove any questions you don't want. You need at least the required amount per category.</p>
+                    <p class="review-curriculum-note" id="review-curriculum-note"></p>
                 </div>
                 <div class="review-nav">
                     <button class="review-nav-btn" id="review-prev-btn">&larr;</button>
@@ -33,6 +34,7 @@ const QuestionReview = (() => {
                 <div class="review-bottom-bar">
                     <div class="review-bottom-left">
                         <button class="review-undo-all-btn" id="review-undo-btn" disabled>Undo Last Removal</button>
+                        <button class="review-revert-btn" id="review-revert-btn">Revert to Original Questions</button>
                         <span class="review-count" id="review-count"></span>
                     </div>
                     <div class="review-bottom-right">
@@ -47,6 +49,7 @@ const QuestionReview = (() => {
         $('#review-prev-btn').addEventListener('click', () => navigateCategory(-1));
         $('#review-next-btn').addEventListener('click', () => navigateCategory(1));
         $('#review-undo-btn').addEventListener('click', undoLastRemoval);
+        $('#review-revert-btn').addEventListener('click', revertToOriginalQuestions);
         $('#review-yolo-btn').addEventListener('click', showYoloModal);
         $('#review-start-btn').addEventListener('click', () => {
             if (onConfirm) onConfirm(trimAndLoad());
@@ -101,23 +104,40 @@ const QuestionReview = (() => {
             pages.push({ type: 'category', roundIndex: 1, catIndex: i, name: cat.name, active, bank });
         });
 
+        const finalOptions = getFinalShowdownOptions(aiData);
+
         pages.push({
             type: 'final',
-            question: {
-                question: aiData.finalClue || '',
-                answer: aiData.finalAnswer || '',
-                confidence: aiData.finalConfidence || 0.8,
-            },
+            question: finalOptions[0],
+            bank: finalOptions.slice(1),
             name: 'Final Showdown',
         });
 
         reviewState = {
             pages,
+            originalPages: clonePages(pages),
             requiredPerCategory,
             currentPageIndex: 0,
             removalHistory: [],
             finalRemoved: false,
+            isAnimating: false,
+            fadeIn: null,
         };
+        const curriculumNote = $('#review-curriculum-note');
+        if (curriculumNote) {
+            const matches = aiData.curriculumContext?.matched_expectations || [];
+            const concept = aiData.curriculumContext?.selected_concept;
+            if (matches.length > 0) {
+                const codes = matches.map(match => match.expectation_code).filter(Boolean).join(', ');
+                const course = matches[0].course_code || 'Ontario curriculum';
+                const conceptText = concept?.name ? ` Topic: ${concept.name}.` : '';
+                curriculumNote.textContent = `Curriculum: Ontario ${course}.${conceptText} Matched expectations: ${codes}`;
+            } else if (concept?.name) {
+                curriculumNote.textContent = `Curriculum: Ontario MTH1W. Topic: ${concept.name}.`;
+            } else {
+                curriculumNote.textContent = '';
+            }
+        }
         onConfirm = callback;
         renderReview();
         reviewOverlay.classList.remove('hidden');
@@ -130,7 +150,42 @@ const QuestionReview = (() => {
         onConfirm = null;
     }
 
+    function clonePages(pages) {
+        return JSON.parse(JSON.stringify(pages));
+    }
+
+    function normalizeFinalOption(option = {}) {
+        return {
+            question: option.question || option.clue || option.finalClue || '',
+            answer: option.answer || option.finalAnswer || '',
+            category: option.category || option.finalCategory || 'Final Showdown',
+            confidence: option.confidence || option.finalConfidence || 0.8,
+        };
+    }
+
+    function getFinalShowdownOptions(aiData) {
+        const options = Array.isArray(aiData.finalShowdownOptions)
+            ? aiData.finalShowdownOptions.map(normalizeFinalOption)
+            : [];
+
+        const sourceFinal = aiData.finalShowdown || aiData.finalJeopardy || {};
+        const legacyFinal = normalizeFinalOption({
+            category: sourceFinal.category || aiData.finalCategory || 'Final Showdown',
+            clue: sourceFinal.clue || sourceFinal.question || aiData.finalClue || '',
+            answer: sourceFinal.answer || aiData.finalAnswer || '',
+            confidence: sourceFinal.confidence || aiData.finalConfidence || 0.8,
+        });
+
+        if (!options.length || options[0].question !== legacyFinal.question || options[0].answer !== legacyFinal.answer) {
+            options.unshift(legacyFinal);
+        }
+
+        const filtered = options.filter(option => option.question || option.answer).slice(0, 3);
+        return filtered.length > 0 ? filtered : [legacyFinal];
+    }
+
     function navigateCategory(direction) {
+        if (reviewState.isAnimating) return;
         const newIdx = reviewState.currentPageIndex + direction;
         if (newIdx < 0 || newIdx >= reviewState.pages.length) return;
         reviewState.currentPageIndex = newIdx;
@@ -138,12 +193,24 @@ const QuestionReview = (() => {
     }
 
     function removeQuestion(pageIndex, qIndex) {
+        if (reviewState.isAnimating) return;
         const page = reviewState.pages[pageIndex];
         if (page.type === 'final') {
-            page.question.removed = true;
-            reviewState.finalRemoved = true;
-            reviewState.removalHistory.push({ pageIndex, qIndex: 0, type: 'final' });
-            renderReview();
+            if (page.question.removed) return;
+            if (page.bank.length > 0) {
+                animateReplacement(pageIndex, 0, () => {
+                    const removed = page.question;
+                    const bankQ = page.bank.shift();
+                    page.question = bankQ;
+                    reviewState.finalRemoved = false;
+                    reviewState.removalHistory.push({ pageIndex, qIndex: 0, type: 'final', removed, bankQ });
+                });
+            } else {
+                page.question.removed = true;
+                reviewState.finalRemoved = true;
+                reviewState.removalHistory.push({ pageIndex, qIndex: 0, type: 'final', removed: page.question, bankQ: null });
+                renderReview();
+            }
             return;
         }
 
@@ -152,24 +219,62 @@ const QuestionReview = (() => {
 
         let bankQ = null;
         if (page.bank.length > 0) {
-            bankQ = page.bank.shift();
-            page.active.splice(qIndex, 1, bankQ);
+            animateReplacement(pageIndex, qIndex, () => {
+                bankQ = page.bank.shift();
+                page.active.splice(qIndex, 1, bankQ);
+                reviewState.removalHistory.push({ pageIndex, qIndex, removed: q, bankQ });
+            });
         } else {
             q.removed = true;
+            reviewState.removalHistory.push({ pageIndex, qIndex, removed: q, bankQ });
+            renderReview();
+        }
+    }
+
+    function shouldReduceMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function animateReplacement(pageIndex, qIndex, applyReplacement) {
+        if (shouldReduceMotion()) {
+            applyReplacement();
+            renderReview();
+            return;
         }
 
-        reviewState.removalHistory.push({ pageIndex, qIndex, removed: q, bankQ });
-        renderReview();
+        const card = document.querySelector(`[data-review-page="${pageIndex}"][data-review-index="${qIndex}"]`);
+        if (!card) {
+            applyReplacement();
+            renderReview();
+            return;
+        }
+
+        reviewState.isAnimating = true;
+        card.classList.add('fade-out');
+        setTimeout(() => {
+            applyReplacement();
+            reviewState.fadeIn = { pageIndex, qIndex };
+            renderReview();
+            setTimeout(() => {
+                reviewState.fadeIn = null;
+                reviewState.isAnimating = false;
+            }, 230);
+        }, 190);
     }
 
     function undoLastRemoval() {
-        if (reviewState.removalHistory.length === 0) return;
+        if (reviewState.isAnimating || reviewState.removalHistory.length === 0) return;
         const last = reviewState.removalHistory.pop();
         const page = reviewState.pages[last.pageIndex];
 
         if (last.type === 'final') {
-            page.question.removed = false;
-            reviewState.finalRemoved = false;
+            if (last.bankQ) {
+                page.bank.unshift(last.bankQ);
+                page.question = last.removed;
+            } else {
+                page.question.removed = false;
+            }
+            reviewState.finalRemoved = !!page.question.removed;
             renderReview();
             return;
         }
@@ -186,15 +291,26 @@ const QuestionReview = (() => {
         renderReview();
     }
 
+    function revertToOriginalQuestions() {
+        if (reviewState.isAnimating) return;
+        if (!confirm('Revert all review edits and restore the original generated questions?')) return;
+
+        reviewState.pages = clonePages(reviewState.originalPages);
+        reviewState.removalHistory = [];
+        reviewState.finalRemoved = false;
+        reviewState.fadeIn = null;
+        renderReview();
+    }
+
     function getBankCount(pageIndex) {
         const page = reviewState.pages[pageIndex];
-        return page.type === 'final' ? -1 : page.bank.length;
+        return page.bank ? page.bank.length : 0;
     }
 
     function canStartGame() {
         for (const page of reviewState.pages) {
             if (page.type === 'final') {
-                if (!page.question.removed) continue;
+                if (page.question && !page.question.removed) continue;
                 return false;
             }
             const remaining = page.active.filter(q => !q.removed).length;
@@ -239,7 +355,7 @@ const QuestionReview = (() => {
                 buildRound('Round 2', r2Pages, 400),
             ],
             finalShowdown: finalPage && !reviewState.finalRemoved ? {
-                category: 'Final Showdown',
+                category: finalPage.question.category || 'Final Showdown',
                 clue: finalPage.question.question,
                 answer: finalPage.question.answer,
             } : null,
@@ -283,14 +399,14 @@ const QuestionReview = (() => {
             const confLabel = q.confidence ? Math.round(q.confidence * 100) + '%' : '';
 
             allCardsHtml = `
-                <div class="review-question-card ${isRemoved ? 'removed' : ''}" style="border-left: 4px solid var(--cts-accent);">
+                <div class="review-question-card ${getCardClasses(isRemoved, 0)}" data-review-page="${reviewState.currentPageIndex}" data-review-index="0" style="border-left: 4px solid var(--cts-accent);">
                     <span class="review-q-value" style="color:var(--cts-accent);">Final</span>
                     <span class="review-q-text">${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
                     <span class="review-q-right">
                         <span class="review-confidence ${confClass}">${confLabel}</span>
                         ${isRemoved
                             ? `<button class="review-undo-btn" onclick="QuestionReview.undoQuestion(${reviewState.currentPageIndex}, 0)">&#8617;</button>`
-                            : `<button class="review-remove-btn" onclick="QuestionReview.removeQ(${reviewState.currentPageIndex}, 0)">&times;</button>`
+                            : (bankCount > 0 ? `<button class="review-remove-btn" onclick="QuestionReview.removeQ(${reviewState.currentPageIndex}, 0)">&times;</button>` : '')
                         }
                     </span>
                 </div>
@@ -304,7 +420,7 @@ const QuestionReview = (() => {
                 const catColor = CAT_COLORS[page.catIndex % CAT_COLORS.length];
 
                 allCardsHtml += `
-                    <div class="review-question-card ${isRemoved ? 'removed' : ''}" style="border-left: 4px solid ${catColor};">
+                    <div class="review-question-card ${getCardClasses(isRemoved, qIdx)}" data-review-page="${reviewState.currentPageIndex}" data-review-index="${qIdx}" style="border-left: 4px solid ${catColor};">
                         <span class="review-q-value">$${value}</span>
                         <span class="review-q-text"><span style="color:${catColor};font-weight:600;">[${page.name}]</span> ${q.question} <span style="color:var(--cts-text-muted);">[${q.answer}]</span></span>
                         <span class="review-q-right">
@@ -336,6 +452,16 @@ const QuestionReview = (() => {
         const canStart = canStartGame();
         $('#review-start-btn').disabled = !canStart;
         $('#review-undo-btn').disabled = reviewState.removalHistory.length === 0;
+        $('#review-revert-btn').disabled = reviewState.isAnimating;
+    }
+
+    function getCardClasses(isRemoved, qIdx) {
+        const classes = [];
+        if (isRemoved) classes.push('removed');
+        if (reviewState.fadeIn && reviewState.fadeIn.pageIndex === reviewState.currentPageIndex && reviewState.fadeIn.qIndex === qIdx) {
+            classes.push('fade-in');
+        }
+        return classes.join(' ');
     }
 
     function removeQ(pageIdx, qIdx) {

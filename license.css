@@ -223,9 +223,27 @@
     color: var(--cts-text);
 }
 
-.ai-modal-field input[type="text"]:focus {
+.ai-modal-field select {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 2px solid var(--cts-surface-lighter);
+    border-radius: var(--radius-md);
+    background: var(--cts-surface);
+    color: var(--cts-text);
+}
+
+.ai-modal-field input[type="text"]:focus,
+.ai-modal-field select:focus {
     outline: none;
     border-color: var(--cts-primary-light);
+}
+
+.ai-modal-help {
+    color: var(--cts-text-muted);
+    font-size: 0.78rem;
+    margin-top: 0.35rem;
+    line-height: 1.35;
 }
 
 .ai-modal-field input[type="range"] {

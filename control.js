@@ -80,20 +80,11 @@ const TeacherControl = (() => {
 
     function handleStateUpdate(data) {
         if (data.type === 'STATE_UPDATE') {
-            console.log('[control] STATE_UPDATE received:', data.state);
             const incoming = data.state;
             Object.assign(localState, incoming);
             if (incoming.usedTiles && Array.isArray(incoming.usedTiles)) {
                 localState.usedTiles = new Set(incoming.usedTiles);
             }
-            console.log('[control] localState after update:', {
-                phase: localState.phase,
-                roundIndex: localState.roundIndex,
-                roundsCount: localState.rounds?.length,
-                usedTilesCount: localState.usedTiles?.size,
-                usedTilesType: typeof localState.usedTiles,
-                isSet: localState.usedTiles instanceof Set
-            });
             renderControl();
         }
     }
@@ -152,12 +143,6 @@ const TeacherControl = (() => {
 
     function renderBoardControl() {
         const s = localState;
-        console.log('[control] renderBoardControl called:', {
-            hasRounds: !!s.rounds,
-            roundsLength: s.rounds?.length,
-            roundIndex: s.roundIndex,
-            currentRound: s.rounds?.[s.roundIndex]?.name
-        });
         $('#control-title').textContent = s.currentRound?.name || 'ROUND 1';
         renderControlScores();
         $('#control-header').classList.remove('hidden');
