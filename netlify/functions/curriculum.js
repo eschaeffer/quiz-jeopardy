@@ -15,6 +15,51 @@ function getCurriculumMetadata() {
   return curriculumData.curricula || [];
 }
 
+function formatCourseLabel(course) {
+  if (!course) return '';
+  if (course.course_name) {
+    return course.course_type
+      ? `${course.course_name} (${course.course_code})`
+      : `${course.course_name} (${course.course_code})`;
+  }
+  if (course.grade && course.subject_area) {
+    return `Grade ${course.grade} ${course.subject_area} (${course.course_code})`;
+  }
+  return course.course_code || '';
+}
+
+function getCourses({ curriculumId = 'ontario' } = {}) {
+  const courseMap = new Map();
+
+  const registerCourse = (record = {}) => {
+    const courseCode = String(record.course_code || '').trim().toUpperCase();
+    if (!courseCode) return;
+    if (courseMap.has(courseCode)) return;
+
+    const course = {
+      curriculum_id: curriculumId,
+      course_code: courseCode,
+      grade: record.grade || null,
+      subject_area: record.subject_area || '',
+      course_name: record.course_name || '',
+      course_type: record.course_type || '',
+    };
+
+    course.label = formatCourseLabel(course);
+    courseMap.set(courseCode, course);
+  };
+
+  (curriculumData.concepts || [])
+    .filter(concept => concept.status === 'active' && concept.curriculum_id === curriculumId)
+    .forEach(registerCourse);
+
+  (curriculumData.expectations || [])
+    .filter(expectation => expectation.status === 'active' && expectation.curriculum_id === curriculumId)
+    .forEach(registerCourse);
+
+  return Array.from(courseMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 function getConcepts({ curriculumId = 'ontario', courseCode, grade, subjectArea } = {}) {
   const normalizedCourse = normalize(courseCode);
   const normalizedSubject = normalize(subjectArea);
@@ -27,6 +72,16 @@ function getConcepts({ curriculumId = 'ontario', courseCode, grade, subjectArea 
     if (normalizedSubject && normalize(concept.subject_area) !== normalizedSubject) return false;
     return true;
   });
+}
+
+function getFocusAreas({ curriculumId = 'ontario', courseCode, grade, subjectArea } = {}) {
+  return getConcepts({ curriculumId, courseCode, grade, subjectArea }).map((concept) => ({
+    id: concept.id,
+    name: concept.name,
+    description: concept.description,
+    keywords: concept.keywords || [],
+    related_expectations: concept.related_expectations || [],
+  }));
 }
 
 function findConcept({ curriculumId = 'ontario', courseCode, grade, subjectArea, conceptId, conceptName } = {}) {
@@ -101,11 +156,58 @@ function retrieveCurriculumContext({ curriculumId = 'ontario', courseCode, grade
   return { concept, expectations };
 }
 
+function assessNarrowTopicRelevance({ curriculumId = 'ontario', courseCode, grade, subjectArea, conceptId, conceptName, narrowTopic = '' } = {}) {
+  const trimmedTopic = String(narrowTopic || '').trim();
+  if (!trimmedTopic) {
+    return { status: 'not_provided', accepted: false, score: 0, sampledExpectations: [] };
+  }
+
+  const concept = findConcept({ curriculumId, courseCode, grade, subjectArea, conceptId, conceptName });
+  const normalizedCourse = normalize(courseCode);
+  const normalizedSubject = normalize(subjectArea);
+  const conceptCodes = new Set((concept?.related_expectations || []).map(normalize));
+  const topicTokens = tokenize(trimmedTopic);
+
+  const candidates = (curriculumData.expectations || []).filter(expectation => {
+    if (expectation.status !== 'active') return false;
+    if (expectation.curriculum_id !== curriculumId) return false;
+    if (normalizedCourse && normalize(expectation.course_code) !== normalizedCourse) return false;
+    if (grade && Number(expectation.grade) !== Number(grade)) return false;
+    if (normalizedSubject && normalize(expectation.subject_area) !== normalizedSubject) return false;
+    if (conceptCodes.size > 0) return conceptCodes.has(normalize(expectation.expectation_code));
+    return true;
+  });
+
+  const scored = candidates
+    .map((expectation) => ({
+      expectation,
+      score: scoreExpectation(expectation, trimmedTopic, topicTokens),
+    }))
+    .sort((a, b) => b.score - a.score || a.expectation.id.localeCompare(b.expectation.id));
+
+  const topScore = scored[0]?.score || 0;
+  const sampledExpectations = scored.slice(0, 3).map(({ expectation, score }) => ({
+    expectation_code: expectation.expectation_code,
+    strand_name: expectation.strand_name,
+    expectation_text: expectation.expectation_text,
+    retrieval_score: score,
+  }));
+
+  if (topScore >= 5) {
+    return { status: 'accepted', accepted: true, score: topScore, sampledExpectations };
+  }
+  if (topScore === 0) {
+    return { status: 'rejected', accepted: false, score: topScore, sampledExpectations };
+  }
+
+  return { status: 'ambiguous', accepted: false, score: topScore, sampledExpectations };
+}
+
 function formatExpectationsForPrompt(expectations, concept) {
   if ((!expectations || expectations.length === 0) && !concept) return '';
 
   const conceptContext = concept
-    ? `Selected teaching topic: ${concept.name}. ${concept.description}`
+    ? `Selected focus area: ${concept.name}. ${concept.description}`
     : '';
 
   const expectationContext = expectations && expectations.length > 0
@@ -119,8 +221,11 @@ function formatExpectationsForPrompt(expectations, concept) {
 
 module.exports = {
   getCurriculumMetadata,
+  getCourses,
   getConcepts,
+  getFocusAreas,
   retrieveExpectations,
   retrieveCurriculumContext,
+  assessNarrowTopicRelevance,
   formatExpectationsForPrompt,
 };

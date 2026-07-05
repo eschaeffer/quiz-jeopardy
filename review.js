@@ -35,6 +35,7 @@ const QuestionReview = (() => {
                     <div class="review-bottom-left">
                         <button class="review-undo-all-btn" id="review-undo-btn" disabled>Undo Last Removal</button>
                         <button class="review-revert-btn" id="review-revert-btn">Revert to Original Questions</button>
+                        <button class="review-copy-btn" id="review-copy-btn">Copy Questions</button>
                         <span class="review-count" id="review-count"></span>
                     </div>
                     <div class="review-bottom-right">
@@ -50,6 +51,7 @@ const QuestionReview = (() => {
         $('#review-next-btn').addEventListener('click', () => navigateCategory(1));
         $('#review-undo-btn').addEventListener('click', undoLastRemoval);
         $('#review-revert-btn').addEventListener('click', revertToOriginalQuestions);
+        $('#review-copy-btn').addEventListener('click', copyQuestionsToClipboard);
         $('#review-yolo-btn').addEventListener('click', showYoloModal);
         $('#review-start-btn').addEventListener('click', () => {
             if (onConfirm) onConfirm(trimAndLoad());
@@ -88,9 +90,28 @@ const QuestionReview = (() => {
         yoloModal.classList.add('hidden');
     }
 
+    function normalizeLingeringMathTagsInString(value) {
+        if (typeof value !== 'string') return value;
+        return value
+            .replace(/\\{2,}(?=[()\[\]])/g, '\\')
+            .replace(/\\\(\s*<<\s*MATH\s*>>\s*(.*?)\s*<<\s*\/\s*MATH\s*>>\s*\\\)/gs, '\\($1\\)')
+            .replace(/<<\s*MATH\s*>>\s*(.*?)\s*<<\s*\/\s*MATH\s*>>/gs, '\\($1\\)');
+    }
+
+    function normalizeLingeringMathTagsDeep(value) {
+        if (typeof value === 'string') return normalizeLingeringMathTagsInString(value);
+        if (Array.isArray(value)) return value.map(normalizeLingeringMathTagsDeep);
+        if (!value || typeof value !== 'object') return value;
+
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nestedValue]) => [key, normalizeLingeringMathTagsDeep(nestedValue)])
+        );
+    }
+
     function startReview(aiData, requiredPerCategory, callback) {
-        const r1 = aiData.round1?.categories || [];
-        const r2 = aiData.round2?.categories || [];
+        const normalizedAiData = normalizeLingeringMathTagsDeep(aiData);
+        const r1 = normalizedAiData.round1?.categories || [];
+        const r2 = normalizedAiData.round2?.categories || [];
 
         const pages = [];
         r1.forEach((cat, i) => {
@@ -104,7 +125,7 @@ const QuestionReview = (() => {
             pages.push({ type: 'category', roundIndex: 1, catIndex: i, name: cat.name, active, bank });
         });
 
-        const finalOptions = getFinalShowdownOptions(aiData);
+        const finalOptions = getFinalShowdownOptions(normalizedAiData);
 
         pages.push({
             type: 'final',
@@ -122,18 +143,23 @@ const QuestionReview = (() => {
             finalRemoved: false,
             isAnimating: false,
             fadeIn: null,
+            hasMath: !!normalizedAiData.hasMath,
+            generationMetadata: normalizedAiData.generationMetadata || null,
         };
         const curriculumNote = $('#review-curriculum-note');
         if (curriculumNote) {
-            const matches = aiData.curriculumContext?.matched_expectations || [];
-            const concept = aiData.curriculumContext?.selected_concept;
+            const matches = normalizedAiData.curriculumContext?.matched_expectations || [];
+            const concept = normalizedAiData.curriculumContext?.selected_focus_area || normalizedAiData.curriculumContext?.selected_concept;
+            const narrowTopic = normalizedAiData.curriculumContext?.narrow_topic || null;
             if (matches.length > 0) {
                 const codes = matches.map(match => match.expectation_code).filter(Boolean).join(', ');
                 const course = matches[0].course_code || 'Ontario curriculum';
-                const conceptText = concept?.name ? ` Topic: ${concept.name}.` : '';
-                curriculumNote.textContent = `Curriculum: Ontario ${course}.${conceptText} Matched expectations: ${codes}`;
+                const conceptText = concept?.name ? ` Focus area: ${concept.name}.` : '';
+                const narrowTopicText = narrowTopic?.warning ? ` ${narrowTopic.warning}` : '';
+                curriculumNote.textContent = `Curriculum: Ontario ${course}.${conceptText} Matched expectations: ${codes}${narrowTopicText}`;
             } else if (concept?.name) {
-                curriculumNote.textContent = `Curriculum: Ontario MTH1W. Topic: ${concept.name}.`;
+                const narrowTopicText = narrowTopic?.warning ? ` ${narrowTopic.warning}` : '';
+                curriculumNote.textContent = `Curriculum: Ontario. Focus area: ${concept.name}.${narrowTopicText}`;
             } else {
                 curriculumNote.textContent = '';
             }
@@ -328,13 +354,41 @@ const QuestionReview = (() => {
         return (qIndex + 1) * multiplier;
     }
 
+    function normalizeBonusQuestionsForAcceptedRound(categories, targetCount) {
+        const allQuestions = categories.flatMap((category, categoryIndex) =>
+            category.questions.map((question, questionIndex) => ({
+                question,
+                categoryIndex,
+                questionIndex,
+                score: Number(question.confidence) || 0,
+                alreadyMarked: !!question.isBonusQuestion
+            }))
+        );
+
+        allQuestions.forEach(({ question }) => {
+            question.isBonusQuestion = false;
+        });
+
+        allQuestions
+            .sort((a, b) => {
+                if (a.alreadyMarked !== b.alreadyMarked) return a.alreadyMarked ? -1 : 1;
+                if (b.score !== a.score) return b.score - a.score;
+                return a.questionIndex - b.questionIndex;
+            })
+            .slice(0, Math.min(targetCount, allQuestions.length))
+            .forEach(({ question }) => {
+                question.isBonusQuestion = true;
+            });
+
+        return categories;
+    }
+
     function trimAndLoad() {
         const r1Pages = reviewState.pages.filter(p => p.type === 'category' && p.roundIndex === 0);
         const r2Pages = reviewState.pages.filter(p => p.type === 'category' && p.roundIndex === 1);
 
-        const buildRound = (name, pages, multiplier) => ({
-            name,
-            categories: pages.map(page => ({
+        const buildRound = (name, pages, multiplier, targetBonusCount) => {
+            const categories = pages.map(page => ({
                 name: page.name,
                 questions: page.active
                     .filter(q => !q.removed)
@@ -343,23 +397,128 @@ const QuestionReview = (() => {
                         value: (j + 1) * multiplier,
                         question: q.question,
                         answer: q.answer,
+                        confidence: q.confidence,
+                        isBonusQuestion: !!q.isBonusQuestion,
                     })),
-            })),
-        });
+            }));
+
+            return {
+                name,
+                categories: normalizeBonusQuestionsForAcceptedRound(categories, targetBonusCount),
+            };
+        };
 
         const finalPage = reviewState.pages.find(p => p.type === 'final');
 
         return {
             rounds: [
-                buildRound('Round 1', r1Pages, 200),
-                buildRound('Round 2', r2Pages, 400),
+                buildRound('Round 1', r1Pages, 200, 1),
+                buildRound('Round 2', r2Pages, 400, 2),
             ],
             finalShowdown: finalPage && !reviewState.finalRemoved ? {
                 category: finalPage.question.category || 'Final Showdown',
                 clue: finalPage.question.question,
                 answer: finalPage.question.answer,
             } : null,
+            hasMath: reviewState.hasMath,
+            generationMetadata: reviewState.generationMetadata,
         };
+    }
+
+    function formatQuestionLine(question, index, prefix = '') {
+        const valuePrefix = prefix ? `${prefix} ` : '';
+        return `${valuePrefix}${index + 1}. Q: ${question.question}\n   A: ${question.answer}`;
+    }
+
+    function buildQuestionsExportText() {
+        if (!reviewState) return '';
+
+        const lines = ['Classroom Trivia Showdown Question Export', ''];
+        const usage = reviewState.generationMetadata?.usage;
+        const resolvedModel = reviewState.generationMetadata?.resolved_model || reviewState.generationMetadata?.requested_model;
+        if (resolvedModel || usage) {
+            if (resolvedModel) {
+                lines.push(`Model: ${resolvedModel}`);
+            }
+            if (usage) {
+                const cost = Number(usage.total_cost_usd || 0).toFixed(4);
+                const totalTokens = Number(usage.total_tokens || 0).toLocaleString();
+                lines.push(`Generation Cost: $${cost}`);
+                lines.push(`Total Tokens: ${totalTokens}`);
+            }
+            lines.push('');
+        }
+
+        const roundPages = reviewState.pages.filter(page => page.type === 'category');
+        const groupedRounds = [0, 1].map(roundIndex => ({
+            roundIndex,
+            pages: roundPages.filter(page => page.roundIndex === roundIndex)
+        }));
+
+        groupedRounds.forEach(({ roundIndex, pages }) => {
+            if (pages.length === 0) return;
+            lines.push(`Round ${roundIndex + 1}`);
+            lines.push('');
+
+            pages.forEach(page => {
+                lines.push(`${page.name}`);
+                page.active.forEach((question, index) => {
+                    const labels = [];
+                    if (question.isBonusQuestion) labels.push('BONUS');
+                    if (question.removed) labels.push('REMOVED');
+                    const prefix = labels.length > 0 ? `[${labels.join(', ')}]` : '';
+                    lines.push(formatQuestionLine(question, index, prefix));
+                });
+
+                if (page.bank && page.bank.length > 0) {
+                    lines.push('   Bank:');
+                    page.bank.forEach((question, index) => {
+                        const prefix = question.isBonusQuestion ? '[BONUS BANK]' : '[BANK]';
+                        lines.push(formatQuestionLine(question, index, prefix));
+                    });
+                }
+
+                lines.push('');
+            });
+        });
+
+        const finalPage = reviewState.pages.find(page => page.type === 'final');
+        if (finalPage) {
+            lines.push('Final Showdown');
+            const finalLabels = [];
+            if (finalPage.question.removed) finalLabels.push('REMOVED');
+            const finalPrefix = finalLabels.length > 0 ? `[${finalLabels.join(', ')}]` : '';
+            lines.push(`${finalPrefix ? `${finalPrefix} ` : ''}Category: ${finalPage.question.category || 'Final Showdown'}`);
+            lines.push(`Q: ${finalPage.question.question}`);
+            lines.push(`A: ${finalPage.question.answer}`);
+
+            if (finalPage.bank && finalPage.bank.length > 0) {
+                lines.push('Bank:');
+                finalPage.bank.forEach((question, index) => {
+                    lines.push(`${index + 1}. Category: ${question.category || 'Final Showdown'}`);
+                    lines.push(`   Q: ${question.question}`);
+                    lines.push(`   A: ${question.answer}`);
+                });
+            }
+        }
+
+        return lines.join('\n');
+    }
+
+    function copyQuestionsToClipboard() {
+        const text = buildQuestionsExportText();
+        if (!text) return;
+
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = $('#review-copy-btn');
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => {
+                btn.textContent = original;
+            }, 2000);
+        }).catch(() => {
+            alert('Could not copy questions to clipboard.');
+        });
     }
 
     function getConfidenceClass(confidence) {
@@ -453,6 +612,10 @@ const QuestionReview = (() => {
         $('#review-start-btn').disabled = !canStart;
         $('#review-undo-btn').disabled = reviewState.removalHistory.length === 0;
         $('#review-revert-btn').disabled = reviewState.isAnimating;
+
+        if (window.MathJaxLoader) {
+            window.MathJaxLoader.maybeTypeset(reviewState.hasMath, $('#review-questions'));
+        }
     }
 
     function getCardClasses(isRemoved, qIdx) {

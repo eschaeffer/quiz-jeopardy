@@ -1,5 +1,7 @@
 const JeopardyGame = (() => {
     const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
+    const WAGER_SLIDER_STEP = 50;
+    const MIN_WAGER = 50;
     let mqttClient = null;
     let sessionId = null;
     let buzzTopic = null;
@@ -18,6 +20,7 @@ const JeopardyGame = (() => {
         rounds: [],
         finalJeopardy: null,
         currentQuestion: null,
+        hasMath: false,
         timerEnabled: true,
         timerDuration: 30,
         timerInterval: null,
@@ -186,6 +189,7 @@ const JeopardyGame = (() => {
                 roundIndex: gameState.roundIndex,
                 rounds: gameState.rounds,
                 currentQuestion: gameState.currentQuestion,
+                hasMath: gameState.hasMath,
                 usedTiles: usedTilesArray,
                 timerRemaining: gameState.timeRemaining,
                 timerDuration: gameState.timerDuration,
@@ -247,6 +251,16 @@ const JeopardyGame = (() => {
                     revealFinalAnswer();
                 }
                 break;
+            case 'REVEAL_FINAL_CLUE':
+                if ($('#final-screen').classList.contains('active')) {
+                    revealFinalClue(data.finalWagers || null);
+                }
+                break;
+            case 'FINAL_WAGER_UPDATE':
+                if ($('#final-screen').classList.contains('active') && typeof data.teamIndex === 'number') {
+                    setFinalWager(data.teamIndex, data.wager, true);
+                }
+                break;
             case 'PAUSE_TIMER':
                 if ($('#question-screen').classList.contains('active') && gameState.timerInterval) {
                     stopTimer();
@@ -285,7 +299,7 @@ const JeopardyGame = (() => {
                 break;
             case 'DD_CONFIRM_WAGER':
                 if (gameState.isDailyDouble && typeof data.wager === 'number') {
-                    gameState.dailyDoubleWager = data.wager;
+                    setDailyDoubleWager(data.wager, false);
                     $('#dd-wager-section').classList.add('hidden');
                     $('#dd-question-section').classList.remove('hidden');
 
@@ -294,6 +308,11 @@ const JeopardyGame = (() => {
 
                     showDailyDoubleQuestion();
                     broadcastState();
+                }
+                break;
+            case 'DD_WAGER_UPDATE':
+                if (gameState.isDailyDouble && gameState.dailyDoubleTeamIndex !== null && typeof data.wager === 'number') {
+                    setDailyDoubleWager(data.wager, true);
                 }
                 break;
             case 'DD_REVEAL_ANSWER':
@@ -440,7 +459,10 @@ const JeopardyGame = (() => {
             timestamp: Date.now()
         }), { qos: 1 });
 
-        const halfTime = Math.ceil(gameState.timerDuration / 2) * 1000;
+        const activationDelay = gameState.timerEnabled
+            ? Math.ceil(gameState.timerDuration / 2) * 1000
+            : 7000;
+
         setTimeout(() => {
             if (gameState.buzzerEnabled && mqttClient && mqttClient.connected) {
                 mqttClient.publish(commandTopic, JSON.stringify({
@@ -448,7 +470,7 @@ const JeopardyGame = (() => {
                     timestamp: Date.now()
                 }), { qos: 1 });
             }
-        }, halfTime);
+        }, activationDelay);
     }
 
     function closeQuestionForBuzzers() {
@@ -525,7 +547,14 @@ const JeopardyGame = (() => {
 
         gameState.rounds = data.rounds;
         gameState.finalJeopardy = data.finalShowdown || data.finalJeopardy || null;
+        gameState.hasMath = !!data.hasMath || JSON.stringify(data).includes('\\(');
         checkReadyToStart();
+    }
+
+    function typesetMainScreen(targets) {
+        if (window.MathJaxLoader) {
+            window.MathJaxLoader.maybeTypeset(gameState.hasMath, targets);
+        }
     }
 
     function loadSampleData() {
@@ -819,7 +848,31 @@ const JeopardyGame = (() => {
     }
 
     function getDailyDoubleMinWager() {
-        return gameState.roundIndex === 0 ? 5 : 100;
+        return MIN_WAGER;
+    }
+
+    function normalizeWagerToSliderStep(wager, minWager, maxWager) {
+        const min = Number(minWager) || 0;
+        const max = Number(maxWager) || 0;
+        if (max <= 0) return 0;
+
+        const clamped = Math.max(min, Math.min(Number(wager) || min, max));
+        const steppedMin = getSliderAlignedMinimum(min, max);
+
+        if (max < steppedMin) {
+            return max;
+        }
+
+        const normalized = Math.round(clamped / WAGER_SLIDER_STEP) * WAGER_SLIDER_STEP;
+        return Math.max(steppedMin, Math.min(normalized, max));
+    }
+
+    function getSliderAlignedMinimum(minWager, maxWager) {
+        const min = Number(minWager) || 0;
+        const max = Number(maxWager) || 0;
+        if (max <= 0) return 0;
+        const steppedMin = min <= 0 ? 0 : Math.ceil(min / WAGER_SLIDER_STEP) * WAGER_SLIDER_STEP;
+        return Math.min(steppedMin, max);
     }
 
     function getDailyDoubleMaxWager(teamIndex) {
@@ -856,6 +909,7 @@ const JeopardyGame = (() => {
         const team = gameState.teams[teamIndex];
         const minWager = getDailyDoubleMinWager();
         const maxWager = getDailyDoubleMaxWager(teamIndex);
+        const sliderMin = getSliderAlignedMinimum(minWager, maxWager);
 
         $('#dd-team-selection').classList.add('hidden');
         $('#dd-team-name').textContent = team.name;
@@ -863,10 +917,14 @@ const JeopardyGame = (() => {
 
         const wagerSlider = $('#dd-wager-slider');
         const wagerDisplay = $('#dd-wager-display');
-        wagerSlider.min = minWager;
+        wagerSlider.min = sliderMin;
         wagerSlider.max = maxWager;
-        wagerSlider.step = minWager;
-        wagerSlider.value = Math.min(team.score, maxWager);
+        wagerSlider.step = WAGER_SLIDER_STEP;
+        const initialWager = normalizeWagerToSliderStep(gameState.dailyDoubleWager > 0
+            ? Math.max(minWager, Math.min(gameState.dailyDoubleWager, maxWager))
+            : Math.max(minWager, Math.min(team.score, maxWager)), minWager, maxWager);
+        wagerSlider.value = initialWager;
+        gameState.dailyDoubleWager = initialWager;
         wagerDisplay.textContent = `${parseInt(wagerSlider.value).toLocaleString()}`;
 
         wagerSlider.removeEventListener('input', updateDailyDoubleWager);
@@ -882,8 +940,80 @@ const JeopardyGame = (() => {
         $('#dd-wager-display').textContent = `${wager.toLocaleString()}`;
     }
 
+    function setDailyDoubleWager(wager, shouldBroadcast = true) {
+        if (gameState.dailyDoubleTeamIndex === null) return;
+
+        const minWager = getDailyDoubleMinWager();
+        const maxWager = getDailyDoubleMaxWager(gameState.dailyDoubleTeamIndex);
+        const sliderMin = getSliderAlignedMinimum(minWager, maxWager);
+        const normalizedWager = normalizeWagerToSliderStep(parseInt(wager) || minWager, minWager, maxWager);
+        gameState.dailyDoubleWager = normalizedWager;
+
+        const slider = $('#dd-wager-slider');
+        if (slider) {
+            slider.min = sliderMin;
+            slider.max = maxWager;
+            slider.step = WAGER_SLIDER_STEP;
+            slider.value = normalizedWager;
+            updateDailyDoubleWager();
+        }
+
+        if (shouldBroadcast) {
+            broadcastState();
+        }
+    }
+
+    function updateFinalWagerDisplay(teamIndex) {
+        const slider = $(`#final-wager-slider-${teamIndex}`);
+        const display = $(`#final-wager-display-${teamIndex}`);
+        if (!slider || !display) return;
+        const wager = parseInt(slider.value) || 0;
+        display.textContent = wager.toLocaleString();
+    }
+
+    function setFinalWager(teamIndex, wager, shouldBroadcast = true) {
+        const team = gameState.teams[teamIndex];
+        if (!team) return;
+
+        const maxWager = Math.max(team.score, 0);
+        const normalizedWager = Math.max(0, Math.min(parseInt(wager) || 0, maxWager));
+        gameState.finalWagers[teamIndex] = normalizedWager;
+
+        const slider = $(`#final-wager-slider-${teamIndex}`);
+        if (slider) {
+            slider.max = maxWager;
+            slider.value = normalizedWager;
+            updateFinalWagerDisplay(teamIndex);
+        }
+
+        if (shouldBroadcast) {
+            broadcastState();
+        }
+    }
+
+    function renderFinalWagers() {
+        const wagersContainer = $('#final-wagers');
+        wagersContainer.innerHTML = gameState.teams.map((team, i) => `
+            <div class="final-wager-input">
+                <div class="final-wager-team">${team.name} (${team.score.toLocaleString()})</div>
+                <div class="final-wager-control">
+                    <label for="final-wager-slider-${i}">Wager:</label>
+                    <div id="final-wager-display-${i}" class="final-wager-display">${(gameState.finalWagers[i] || 0).toLocaleString()}</div>
+                    <input type="range" id="final-wager-slider-${i}" class="final-wager-slider" min="0" max="${Math.max(team.score, 0)}" step="${WAGER_SLIDER_STEP}" value="${gameState.finalWagers[i] || 0}">
+                </div>
+            </div>
+        `).join('');
+
+        gameState.teams.forEach((_, i) => {
+            const slider = $(`#final-wager-slider-${i}`);
+            if (!slider) return;
+            slider.addEventListener('input', () => setFinalWager(i, slider.value));
+            updateFinalWagerDisplay(i);
+        });
+    }
+
     function confirmDailyDoubleWager() {
-        gameState.dailyDoubleWager = parseInt($('#dd-wager-slider').value);
+        setDailyDoubleWager($('#dd-wager-slider').value, false);
         $('#dd-wager-section').classList.add('hidden');
         $('#dd-question-section').classList.remove('hidden');
 
@@ -911,6 +1041,7 @@ const JeopardyGame = (() => {
         } else {
             $('#dd-timer-display').classList.add('hidden');
         }
+        typesetMainScreen($('#dd-question-section'));
         broadcastState();
     }
 
@@ -1027,6 +1158,7 @@ const JeopardyGame = (() => {
         openQuestionForBuzzers();
 
         showScreen('question-screen');
+        typesetMainScreen($('#question-container'));
         broadcastState();
     }
 
@@ -1060,6 +1192,7 @@ const JeopardyGame = (() => {
         $('#answer-container').classList.remove('hidden');
         $('#reveal-answer-btn').classList.add('hidden');
         $('#continue-btn').classList.remove('hidden');
+        typesetMainScreen($('#question-container'));
         broadcastState();
     }
 
@@ -1111,17 +1244,20 @@ const JeopardyGame = (() => {
             return;
         }
 
+        gameState.currentQuestion = {
+            category: gameState.finalJeopardy.category,
+            value: 0,
+            question: gameState.finalJeopardy.clue,
+            answer: gameState.finalJeopardy.answer,
+            tileId: 'final-showdown',
+            isDailyDouble: false
+        };
+
         $('#final-category').textContent = gameState.finalJeopardy.category;
         $('#final-clue').textContent = gameState.finalJeopardy.clue;
         $('#final-answer').textContent = `Answer: ${gameState.finalJeopardy.answer}`;
 
-        const wagersContainer = $('#final-wagers');
-        wagersContainer.innerHTML = gameState.teams.map((team, i) => `
-            <div class="wager-input">
-                <label>${team.name} (${team.score.toLocaleString()})</label>
-                <input type="number" id="wager-${i}" min="0" max="${team.score}" value="0">
-            </div>
-        `).join('');
+        renderFinalWagers();
 
         $('#final-wager-section').classList.remove('hidden');
         $('#final-clue-section').classList.add('hidden');
@@ -1138,15 +1274,20 @@ const JeopardyGame = (() => {
         }
 
         showScreen('final-screen');
+        typesetMainScreen($('#final-screen'));
         broadcastState();
     }
 
-    function revealFinalClue() {
-        gameState.teams.forEach((team, i) => {
-            const wagerInput = $(`#wager-${i}`);
-            let wager = parseInt(wagerInput.value) || 0;
-            wager = Math.max(0, Math.min(wager, team.score));
-            gameState.finalWagers[i] = wager;
+    function revealFinalClue(overrideWagers = null) {
+        gameState.teams.forEach((_, i) => {
+            let wager;
+            if (overrideWagers && Object.prototype.hasOwnProperty.call(overrideWagers, i)) {
+                wager = overrideWagers[i];
+            } else {
+                const wagerInput = $(`#final-wager-slider-${i}`);
+                wager = wagerInput?.value;
+            }
+            setFinalWager(i, wager, false);
         });
 
         $('#final-wager-section').classList.add('hidden');
@@ -1161,6 +1302,8 @@ const JeopardyGame = (() => {
         } else {
             showFinalScoringControls();
         }
+        typesetMainScreen($('#final-screen'));
+        broadcastState();
     }
 
     function showFinalScoringControls() {
@@ -1181,6 +1324,8 @@ const JeopardyGame = (() => {
                 </div>
             </div>
         `).join('');
+        typesetMainScreen($('#final-screen'));
+        broadcastState();
     }
 
     function revealFinalAnswer() {
@@ -1201,6 +1346,8 @@ const JeopardyGame = (() => {
                 </div>
             </div>
         `).join('');
+        typesetMainScreen($('#final-screen'));
+        broadcastState();
     }
 
     function scoreFinalTeam(teamIndex, isCorrect) {
@@ -1223,6 +1370,7 @@ const JeopardyGame = (() => {
 
         correctBtn.classList.toggle('selected', isCorrect);
         wrongBtn.classList.toggle('selected', !isCorrect);
+        broadcastState();
     }
 
     function showResults() {
@@ -1255,6 +1403,7 @@ const JeopardyGame = (() => {
         gameState.teams = [];
         gameState.currentRound = null;
         gameState.currentQuestion = null;
+        gameState.hasMath = false;
         gameState.usedTiles = new Set();
         gameState.roundIndex = 0;
         gameState.finalWagers = {};

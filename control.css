@@ -293,10 +293,9 @@ body {
     color: var(--ctrl-text);
     margin-bottom: 1rem;
     min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     line-height: 1.4;
+    text-align: center;
 }
 
 #control-buzz-indicator {
@@ -416,6 +415,76 @@ body {
     font-size: 1.1rem;
     color: var(--ctrl-accent);
     font-weight: 700;
+}
+
+#control-final-wagers {
+    margin-bottom: 1rem;
+}
+
+.ctrl-final-wager-input {
+    background: var(--ctrl-surface);
+    border: 2px solid var(--ctrl-primary);
+    border-radius: var(--ctrl-radius-sm);
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.ctrl-final-wager-team {
+    font-size: 0.95rem;
+    color: var(--ctrl-accent);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.ctrl-final-wager-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.ctrl-final-wager-control label {
+    font-size: 0.95rem;
+    color: var(--ctrl-text);
+    font-weight: 600;
+}
+
+.ctrl-final-wager-display {
+    font-size: 1.6rem;
+    color: var(--ctrl-accent);
+    font-weight: 900;
+}
+
+.ctrl-final-wager-slider {
+    width: 100%;
+    max-width: 320px;
+    height: 20px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--ctrl-surface-light);
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+}
+
+.ctrl-final-wager-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ctrl-accent);
+    cursor: pointer;
+    border: 2px solid var(--ctrl-white);
+}
+
+.ctrl-final-wager-slider::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ctrl-accent);
+    cursor: pointer;
+    border: 2px solid var(--ctrl-white);
 }
 
 #results-control {
@@ -585,10 +654,18 @@ body {
     color: var(--ctrl-text);
     margin-bottom: 1rem;
     min-height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     line-height: 1.4;
+    text-align: center;
+}
+
+#control-question-text mjx-container[display="false"],
+#control-final-clue mjx-container[display="false"],
+#control-answer-text mjx-container[display="false"],
+#control-final-answer-text mjx-container[display="false"],
+#ctrl-dd-question-text mjx-container[display="false"],
+#ctrl-dd-answer-text mjx-container[display="false"] {
+    margin: 0 0.14em;
 }
 
 #ctrl-dd-scoring h3 {

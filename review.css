@@ -270,7 +270,8 @@
 }
 
 .review-undo-all-btn,
-.review-revert-btn {
+.review-revert-btn,
+.review-copy-btn {
     background: var(--cts-surface);
     border: 1px solid var(--cts-primary);
     color: var(--cts-text);
@@ -282,19 +283,26 @@
 }
 
 .review-undo-all-btn:disabled,
-.review-revert-btn:disabled {
+.review-revert-btn:disabled,
+.review-copy-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
 
 .review-undo-all-btn:not(:disabled):hover,
-.review-revert-btn:not(:disabled):hover {
+.review-revert-btn:not(:disabled):hover,
+.review-copy-btn:not(:disabled):hover {
     background: var(--cts-primary);
 }
 
 .review-revert-btn {
     border-color: var(--cts-text-muted);
     color: var(--cts-text-muted);
+}
+
+.review-copy-btn {
+    border-color: var(--cts-secondary);
+    color: var(--cts-secondary);
 }
 
 .review-count {

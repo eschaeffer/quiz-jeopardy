@@ -1,3 +1,6 @@
+const { initializeCredits } = require('./supabase-credits');
+const { validateLicenseKeyServer, isDevLicenseKey } = require('./license-server-utils');
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -34,6 +37,18 @@ exports.handler = async (event) => {
   });
 
   const data = await response.json();
+
+  if (response.ok && data?.activated && !isDevLicenseKey(license_key)) {
+    try {
+      const validated = await validateLicenseKeyServer(license_key);
+      const productId = Number(validated.productId);
+      if (validated.valid && productId) {
+        data.credit_balance = await initializeCredits(license_key, productId);
+      }
+    } catch (error) {
+      data.credit_balance_error = error.message;
+    }
+  }
 
   return {
     statusCode: response.status,

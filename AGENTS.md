@@ -39,6 +39,19 @@ Documentation rules:
 - The source repository remains the authority for implementation details.
 - Planning documents must never override inspection of the actual code.
 
+## Curriculum Source Documents
+
+For official curriculum source files such as PDFs or copied source extracts:
+
+- Store the original source documents in the planning workspace by default.
+- Use the planning workspace for source assessments, extraction rules, curation notes,
+  and coder handoff prompts.
+- Store only derived runtime artifacts in the coding workspace, such as curated JSON,
+  retrieval code, and UI/runtime wiring.
+- Coding agents may still inspect the original source documents when implementation
+  requires direct validation against the source, but the planning workspace remains
+  the canonical home for those source documents.
+
 Before ending a substantial task, check whether one of the update conditions
 above has been met. If so, update the planning workspace before giving the
 final task summary.

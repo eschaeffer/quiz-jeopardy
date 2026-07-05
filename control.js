@@ -1,5 +1,7 @@
 const TeacherControl = (() => {
     const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
+    const WAGER_SLIDER_STEP = 50;
+    const MIN_WAGER = 50;
     let client = null;
     let sessionId = null;
     let stateTopic = null;
@@ -11,6 +13,7 @@ const TeacherControl = (() => {
         roundIndex: 0,
         rounds: [],
         currentQuestion: null,
+        hasMath: false,
         usedTiles: new Set(),
         scores: [],
         answerRevealed: false,
@@ -36,6 +39,27 @@ const TeacherControl = (() => {
 
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => document.querySelectorAll(sel);
+
+    function getSliderAlignedMinimum(minWager, maxWager) {
+        const min = Number(minWager) || 0;
+        const max = Number(maxWager) || 0;
+        if (max <= 0) return 0;
+        const steppedMin = min <= 0 ? 0 : Math.ceil(min / WAGER_SLIDER_STEP) * WAGER_SLIDER_STEP;
+        return Math.min(steppedMin, max);
+    }
+
+    function normalizeWagerToSliderStep(wager, minWager, maxWager) {
+        const min = Number(minWager) || 0;
+        const max = Number(maxWager) || 0;
+        if (max <= 0) return 0;
+
+        const clamped = Math.max(min, Math.min(Number(wager) || min, max));
+        const sliderMin = getSliderAlignedMinimum(min, max);
+        if (max < sliderMin) return max;
+
+        const normalized = Math.round(clamped / WAGER_SLIDER_STEP) * WAGER_SLIDER_STEP;
+        return Math.max(sliderMin, Math.min(normalized, max));
+    }
 
     function init() {
         const params = new URLSearchParams(window.location.search);
@@ -96,6 +120,12 @@ const TeacherControl = (() => {
             ...payload,
             timestamp: Date.now()
         }), { qos: 1 });
+    }
+
+    function typesetControl(targets) {
+        if (window.MathJaxLoader) {
+            window.MathJaxLoader.maybeTypeset(localState.hasMath, targets);
+        }
     }
 
     function renderControl() {
@@ -256,6 +286,8 @@ const TeacherControl = (() => {
             $('#ctrl-reveal-btn').classList.remove('hidden');
             $('#ctrl-continue-btn').classList.add('hidden');
         }
+
+        typesetControl($('#question-control'));
     }
 
     function renderDailyDoubleControl() {
@@ -293,19 +325,26 @@ const TeacherControl = (() => {
                 $('#ctrl-dd-team-name').textContent = team.name;
                 $('#ctrl-dd-team-score').textContent = `${team.score.toLocaleString()}`;
 
-                const minWager = s.roundIndex === 0 ? 5 : 100;
+                const minWager = MIN_WAGER;
                 const boardMax = Math.max(...s.rounds[s.roundIndex].categories.flatMap(c => c.questions.map(q => q.value)));
                 const maxWager = Math.max(team.score, boardMax);
+                const sliderMin = getSliderAlignedMinimum(minWager, maxWager);
 
                 const slider = $('#ctrl-dd-wager-slider');
-                slider.min = minWager;
+                slider.min = sliderMin;
                 slider.max = maxWager;
-                slider.step = minWager;
-                slider.value = Math.min(team.score, maxWager);
+                slider.step = WAGER_SLIDER_STEP;
+                const currentWager = Number(s.ddWager);
+                slider.value = normalizeWagerToSliderStep(Number.isFinite(currentWager) && currentWager > 0
+                    ? Math.max(minWager, Math.min(currentWager, maxWager))
+                    : Math.max(minWager, Math.min(team.score, maxWager)), minWager, maxWager);
                 $('#ctrl-dd-wager-display').textContent = `${parseInt(slider.value).toLocaleString()}`;
 
                 slider.oninput = () => {
                     $('#ctrl-dd-wager-display').textContent = `${parseInt(slider.value).toLocaleString()}`;
+                };
+                slider.onchange = () => {
+                    sendDailyDoubleWagerUpdate();
                 };
             }
         } else if (s.ddQuestionSection) {
@@ -336,6 +375,8 @@ const TeacherControl = (() => {
                 $('#ctrl-dd-reveal-btn').classList.remove('hidden');
                 $('#ctrl-dd-continue-btn').classList.add('hidden');
             }
+
+            typesetControl($('#dd-control'));
         }
     }
 
@@ -355,6 +396,14 @@ const TeacherControl = (() => {
         `;
     }
 
+    function sendDailyDoubleWagerUpdate() {
+        const slider = $('#ctrl-dd-wager-slider');
+        if (!slider) return;
+        sendCommand('DD_WAGER_UPDATE', {
+            wager: parseInt(slider.value) || 0,
+        });
+    }
+
     function renderControlTeamScoring(isFinal) {
         const container = isFinal ? $('#control-final-team-scoring') : $('#control-team-scoring');
         const teams = localState.teams;
@@ -371,6 +420,66 @@ const TeacherControl = (() => {
                 </div>
             `;
         }).join('');
+    }
+
+    function updateFinalWagerDisplay(teamIndex) {
+        const slider = $(`#ctrl-final-wager-slider-${teamIndex}`);
+        const display = $(`#ctrl-final-wager-display-${teamIndex}`);
+        if (!slider || !display) return;
+        display.textContent = `${(parseInt(slider.value) || 0).toLocaleString()}`;
+    }
+
+    function sendFinalWagerUpdate(teamIndex) {
+        const slider = $(`#ctrl-final-wager-slider-${teamIndex}`);
+        if (!slider) return;
+        sendCommand('FINAL_WAGER_UPDATE', {
+            teamIndex,
+            wager: parseInt(slider.value) || 0,
+        });
+    }
+
+    function renderFinalWagerControls() {
+        const container = $('#control-final-wagers');
+        const teams = localState.teams || [];
+        container.innerHTML = teams.map((team, i) => {
+            const currentWager = Number(localState.finalWagers?.[i]);
+            const maxWager = Math.max(team.score, 0);
+            const initialValue = Number.isFinite(currentWager) ? Math.max(0, Math.min(currentWager, maxWager)) : 0;
+            return `
+                <div class="ctrl-final-wager-input">
+                    <div class="ctrl-final-wager-team">${team.name} (${team.score.toLocaleString()})</div>
+                    <div class="ctrl-final-wager-control">
+                        <label for="ctrl-final-wager-slider-${i}">Wager:</label>
+                        <div id="ctrl-final-wager-display-${i}" class="ctrl-final-wager-display">${initialValue.toLocaleString()}</div>
+                        <input type="range" id="ctrl-final-wager-slider-${i}" class="ctrl-final-wager-slider" min="0" max="${maxWager}" step="${WAGER_SLIDER_STEP}" value="${initialValue}">
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        teams.forEach((_, i) => {
+            const slider = $(`#ctrl-final-wager-slider-${i}`);
+            if (!slider) return;
+            slider.oninput = () => {
+                updateFinalWagerDisplay(i);
+            };
+            slider.onchange = () => {
+                sendFinalWagerUpdate(i);
+            };
+            updateFinalWagerDisplay(i);
+        });
+    }
+
+    function collectFinalWagers() {
+        const wagers = {};
+        (localState.teams || []).forEach((team, i) => {
+            const slider = $(`#ctrl-final-wager-slider-${i}`);
+            const maxWager = Math.max(team.score, 0);
+            let wager = parseInt(slider?.value) || 0;
+            wager = Math.max(0, Math.min(wager, maxWager));
+            wagers[i] = wager;
+        });
+        return wagers;
     }
 
     function renderFinalControl() {
@@ -396,13 +505,20 @@ const TeacherControl = (() => {
         }
 
         if (s.finalWagerPhase) {
+            $('#control-final-wagers').classList.remove('hidden');
+            renderFinalWagerControls();
             $('#control-final-clue').textContent = 'Teams are placing wagers...';
             $('#control-final-scoring').classList.add('hidden');
             $('#control-final-answer').classList.add('hidden');
-            $('.control-actions').querySelectorAll('.ctrl-btn').forEach(b => b.classList.add('hidden'));
+            $('#ctrl-final-clue-btn').classList.remove('hidden');
+            $('#ctrl-final-reveal-btn').classList.add('hidden');
+            $('#ctrl-final-pause-btn').classList.add('hidden');
+            $('#ctrl-final-continue-btn').classList.add('hidden');
         } else {
+            $('#control-final-wagers').classList.add('hidden');
+            $('#ctrl-final-clue-btn').classList.add('hidden');
             $('#control-final-clue').textContent = s.currentQuestion?.question || '';
-            $('#control-answer-text').textContent = `Answer: ${s.currentQuestion?.answer || ''}`;
+            $('#control-final-answer-text').textContent = `Answer: ${s.currentQuestion?.answer || ''}`;
 
             if (s.finalScoringVisible) {
                 $('#control-final-scoring').classList.remove('hidden');
@@ -421,6 +537,8 @@ const TeacherControl = (() => {
                 $('#ctrl-final-continue-btn').classList.add('hidden');
             }
         }
+
+        typesetControl($('#final-control'));
     }
 
     function renderResultsControl() {
@@ -455,6 +573,9 @@ const TeacherControl = (() => {
         },
         revealAnswer(isFinal) {
             sendCommand('REVEAL_ANSWER', { isFinal });
+        },
+        revealFinalClue() {
+            sendCommand('REVEAL_FINAL_CLUE', { finalWagers: collectFinalWagers() });
         },
         pauseTimer(isFinal) {
             sendCommand('PAUSE_TIMER', { isFinal });
@@ -501,6 +622,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('ctrl-final-reveal-btn').addEventListener('click', () => {
         TeacherControl.revealAnswer(true);
+    });
+
+    document.getElementById('ctrl-final-clue-btn').addEventListener('click', () => {
+        TeacherControl.revealFinalClue();
     });
 
     document.getElementById('ctrl-final-pause-btn').addEventListener('click', () => {
