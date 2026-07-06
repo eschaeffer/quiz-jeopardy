@@ -38,11 +38,11 @@ exports.handler = async (event) => {
     }
 
     const validated = await validateLicenseKeyServer(refillKey);
-    if (!validated.valid || !validated.productId) {
+    if (!validated.valid || (!validated.productId && !validated.variantId)) {
       return errorResponse(400, 'Invalid refill key', 'INVALID_REFILL_KEY', 'request_error');
     }
 
-    const refillTier = getCreditTierByProductId(validated.productId);
+    const refillTier = getCreditTierByProductId(validated.variantId) || getCreditTierByProductId(validated.productId);
     if (!refillTier || !refillTier.isRefill) {
       return errorResponse(400, 'This key is not configured as a refill product yet', 'REFILL_PRODUCT_NOT_CONFIGURED', 'request_error');
     }

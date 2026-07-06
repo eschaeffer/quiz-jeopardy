@@ -1,3 +1,5 @@
+const { deactivateActivationRecord } = require('./supabase-activations');
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -34,6 +36,17 @@ exports.handler = async (event) => {
   });
 
   const data = await response.json();
+
+  if (response.ok && data?.deactivated) {
+    try {
+      data.activation_record = await deactivateActivationRecord({
+        licenseKey: license_key,
+        instanceId: instance_id,
+      });
+    } catch (error) {
+      data.activation_record_error = error.message;
+    }
+  }
 
   return {
     statusCode: response.status,

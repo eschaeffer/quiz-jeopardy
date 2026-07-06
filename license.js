@@ -18,6 +18,10 @@ const LicenseManager = (() => {
 
     let pendingKey = null;
 
+    function getManageableLicenseKey() {
+        return localStorage.getItem(LICENSE_KEY) || pendingKey || inputEl?.value?.trim() || null;
+    }
+
     function init() {
         createOverlay();
         createDeviceNameModal();
@@ -35,7 +39,7 @@ const LicenseManager = (() => {
                 <h2>Activate Classroom Trivia Showdown</h2>
                 <p>Enter your license key to continue.</p>
                 <div class="license-input-group">
-                    <input type="text" id="license-input" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" autocomplete="off">
+                    <input type="text" id="license-input" placeholder="Enter license key" maxlength="64" autocomplete="off">
                     <button id="license-activate-btn" class="btn primary">Activate</button>
                 </div>
                 <div class="license-error" id="license-error"></div>
@@ -61,13 +65,7 @@ const LicenseManager = (() => {
         });
 
         inputEl.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            let formatted = '';
-            for (let i = 0; i < v.length && i < 16; i++) {
-                if (i > 0 && i % 4 === 0) formatted += '-';
-                formatted += v[i];
-            }
-            e.target.value = formatted;
+            e.target.value = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase().slice(0, 64);
         });
 
         overlay.querySelector('#license-manage-btn').addEventListener('click', showManageDevices);
@@ -110,36 +108,97 @@ const LicenseManager = (() => {
         manageDevicesModal.innerHTML = `
             <div class="license-overlay-content">
                 <h2>Manage Devices</h2>
-                <p>Current device: <strong id="manage-current-device"></strong></p>
+                <p>Active devices on this license:</p>
+                <div id="manage-activations-list" class="license-activations-list"></div>
                 <div id="manage-device-error" class="license-error"></div>
-                <button id="manage-deactivate-btn" class="btn primary">Deactivate This Device</button>
-                <button id="manage-close-btn" class="btn secondary" style="margin-left:0.5rem;">Close</button>
+                <button id="manage-close-btn" class="btn secondary">Close</button>
                 <p style="margin-top:1rem;font-size:0.8rem;color:var(--cts-text-muted);">
-                    Note: Only this browser's activation can be deactivated here.
-                    Other devices must be deactivated from their own browsers.
+                    You can deactivate old devices here to free an activation slot.
                 </p>
             </div>
         `;
         document.getElementById('app').before(manageDevicesModal);
 
         manageDevicesModal.querySelector('#manage-close-btn').addEventListener('click', hideManageDevices);
-        manageDevicesModal.querySelector('#manage-deactivate-btn').addEventListener('click', deactivateCurrentDevice);
     }
 
-    function showManageDevices() {
-        const instanceName = localStorage.getItem(LICENSE_INSTANCE_NAME);
-        manageDevicesModal.querySelector('#manage-current-device').textContent = instanceName || 'Unknown';
+    async function showManageDevices() {
         manageDevicesModal.querySelector('#manage-device-error').textContent = '';
         manageDevicesModal.style.display = 'flex';
+        await loadActivations();
     }
 
     function hideManageDevices() {
         manageDevicesModal.style.display = 'none';
     }
 
-    async function deactivateCurrentDevice() {
-        const key = localStorage.getItem(LICENSE_KEY);
-        const instanceId = localStorage.getItem(LICENSE_INSTANCE_ID);
+    function formatActivationDate(value) {
+        if (!value) return 'Unknown';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
+    }
+
+    async function loadActivations() {
+        const key = getManageableLicenseKey();
+        const errorEl = manageDevicesModal.querySelector('#manage-device-error');
+        const listEl = manageDevicesModal.querySelector('#manage-activations-list');
+
+        if (!key) {
+            errorEl.textContent = 'No active license key found.';
+            return;
+        }
+
+        listEl.innerHTML = '<div class="ai-modal-help">Loading devices...</div>';
+
+        try {
+            const response = await fetch('/.netlify/functions/list-activations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ license_key: key }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                errorEl.textContent = data.error || 'Could not load devices.';
+                listEl.innerHTML = '';
+                return;
+            }
+
+            const currentInstanceId = localStorage.getItem(LICENSE_INSTANCE_ID);
+            const activations = Array.isArray(data.activations) ? data.activations : [];
+            if (activations.length === 0) {
+                listEl.innerHTML = '<div class="ai-modal-help">No activation records found.</div>';
+                return;
+            }
+
+            listEl.innerHTML = activations.map((activation) => {
+                const isCurrent = String(activation.instance_id) === String(currentInstanceId);
+                const canDeactivate = activation.status === 'active';
+                return `
+                    <div class="license-activation-item">
+                        <div class="license-activation-main">
+                            <div class="license-activation-name">${activation.instance_name}${isCurrent ? ' (This Device)' : ''}</div>
+                            <div class="license-activation-meta">Status: ${activation.status} | Activated: ${formatActivationDate(activation.activated_at)} | Last seen: ${formatActivationDate(activation.last_seen_at)}</div>
+                        </div>
+                        ${canDeactivate ? `<button class="btn secondary license-activation-deactivate" data-instance-id="${activation.instance_id}">Deactivate</button>` : '<span class="ai-modal-help">Deactivated</span>'}
+                    </div>
+                `;
+            }).join('');
+
+            listEl.querySelectorAll('.license-activation-deactivate').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    await deactivateActivation(button.getAttribute('data-instance-id'));
+                });
+            });
+        } catch (e) {
+            errorEl.textContent = 'Could not load devices. Check your connection.';
+            listEl.innerHTML = '';
+        }
+    }
+
+    async function deactivateActivation(instanceId) {
+        const key = getManageableLicenseKey();
+        const currentInstanceId = localStorage.getItem(LICENSE_INSTANCE_ID);
         const errorEl = manageDevicesModal.querySelector('#manage-device-error');
 
         if (!key || !instanceId) {
@@ -148,20 +207,25 @@ const LicenseManager = (() => {
         }
 
         try {
-            const response = await fetch('/.netlify/functions/deactivate', {
+            const response = await fetch('/.netlify/functions/deactivate-activation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ license_key: key, instance_id: parseInt(instanceId) }),
+                body: JSON.stringify({ license_key: key, instance_id: instanceId }),
             });
             const data = await response.json();
 
             if (data.deactivated) {
-                localStorage.removeItem(LICENSE_KEY);
-                localStorage.removeItem(LICENSE_VALIDATED_AT);
-                localStorage.removeItem(LICENSE_INSTANCE_ID);
-                localStorage.removeItem(LICENSE_INSTANCE_NAME);
-                hideManageDevices();
-                showOverlay('Device deactivated. Please enter your license key again.');
+                if (String(instanceId) === String(currentInstanceId)) {
+                    localStorage.removeItem(LICENSE_KEY);
+                    localStorage.removeItem(LICENSE_VALIDATED_AT);
+                    localStorage.removeItem(LICENSE_INSTANCE_ID);
+                    localStorage.removeItem(LICENSE_INSTANCE_NAME);
+                    hideManageDevices();
+                    showOverlay('Device deactivated. Please enter your license key again.');
+                    return;
+                }
+
+                await loadActivations();
             } else {
                 errorEl.textContent = data.error || 'Failed to deactivate device.';
             }
@@ -248,13 +312,14 @@ const LicenseManager = (() => {
     }
 
     async function validateAndActivate(key) {
-        if (!key || key.replace(/-/g, '').length !== 16) {
-            showError('Please enter a valid license key (XXXX-XXXX-XXXX-XXXX).');
+        const normalizedKey = String(key || '').trim().toUpperCase();
+        if (!/^[A-Z0-9-]{16,64}$/.test(normalizedKey)) {
+            showError('Please enter a valid license key.');
             return;
         }
 
-        if (key === DEV_KEY) {
-            localStorage.setItem(LICENSE_KEY, key);
+        if (normalizedKey === DEV_KEY) {
+            localStorage.setItem(LICENSE_KEY, normalizedKey);
             localStorage.setItem(LICENSE_VALIDATED_AT, Date.now().toString());
             localStorage.setItem(LICENSE_INSTANCE_ID, 'dev');
             localStorage.setItem(LICENSE_INSTANCE_NAME, 'Dev Device');
@@ -266,9 +331,9 @@ const LicenseManager = (() => {
         errorEl.textContent = '';
 
         try {
-            const result = await callLicenseAPI(key);
+            const result = await callLicenseAPI(normalizedKey);
             if (result.valid) {
-                pendingKey = key;
+                pendingKey = normalizedKey;
                 setLoading(false);
                 showDeviceNameModal();
             } else {
@@ -279,7 +344,7 @@ const LicenseManager = (() => {
             const retryBtn = document.createElement('button');
             retryBtn.className = 'license-retry';
             retryBtn.textContent = 'Retry';
-            retryBtn.addEventListener('click', () => validateAndActivate(key));
+            retryBtn.addEventListener('click', () => validateAndActivate(normalizedKey));
             errorEl.appendChild(retryBtn);
         }
     }
@@ -287,6 +352,7 @@ const LicenseManager = (() => {
     async function completeActivation(key, deviceName) {
         hideDeviceNameModal();
         setLoading(true);
+        pendingKey = key;
 
         try {
             const response = await fetch('/.netlify/functions/activate', {
@@ -302,14 +368,19 @@ const LicenseManager = (() => {
                 localStorage.setItem(LICENSE_INSTANCE_ID, data.instance?.id?.toString());
                 localStorage.setItem(LICENSE_INSTANCE_NAME, deviceName);
                 setLoading(false);
+                pendingKey = null;
                 hideOverlay();
             } else {
                 setLoading(false);
                 const limitReached = data.meta?.license_key?.activation_usage >= data.meta?.license_key?.activation_limit;
-                if (limitReached) {
+                const rawLimitReached = typeof data.error === 'string' && /activation limit/i.test(data.error);
+                if (limitReached || rawLimitReached) {
                     const usage = data.meta?.license_key?.activation_usage;
                     const limit = data.meta?.license_key?.activation_limit;
-                    showError(`This license has reached its maximum device limit (${usage}/${limit}). Deactivate a device to continue.`, true);
+                    const message = (usage && limit)
+                        ? `This license has reached its maximum device limit (${usage}/${limit}). Deactivate a device to continue.`
+                        : 'This license key has reached the activation limit. Deactivate an old device to continue.';
+                    showError(message, true);
                 } else {
                     showError(data.error || 'Activation failed. Please try again.');
                 }
@@ -331,6 +402,7 @@ const LicenseManager = (() => {
             const result = await callLicenseAPI(key);
             if (result.valid) {
                 localStorage.setItem(LICENSE_VALIDATED_AT, Date.now().toString());
+                touchCurrentActivation();
                 ensureActivated(key);
             } else {
                 localStorage.removeItem(LICENSE_KEY);
@@ -359,6 +431,24 @@ const LicenseManager = (() => {
                 ? 'This license key is not valid for this product.'
                 : (data.error || (data.valid === false ? 'Invalid license key.' : null)),
         };
+    }
+
+    async function touchCurrentActivation() {
+        const licenseKey = localStorage.getItem(LICENSE_KEY);
+        const instanceId = localStorage.getItem(LICENSE_INSTANCE_ID);
+        if (!licenseKey || !instanceId || instanceId === 'dev') {
+            return;
+        }
+
+        try {
+            await fetch('/.netlify/functions/touch-activation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ license_key: licenseKey, instance_id: instanceId }),
+            });
+        } catch (e) {
+            // Best-effort only.
+        }
     }
 
     function getKey() {

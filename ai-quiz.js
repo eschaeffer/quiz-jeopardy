@@ -110,7 +110,7 @@ const AIQuizGenerator = (() => {
                 <div class="ai-modal-field" id="ai-refill-field" style="display:none;">
                     <label for="ai-refill-key">Refill Key</label>
                     <div class="license-input-group">
-                        <input type="text" id="ai-refill-key" placeholder="Enter refill key" maxlength="32" autocomplete="off">
+                        <input type="text" id="ai-refill-key" placeholder="Enter refill key" maxlength="64" autocomplete="off">
                         <button id="ai-refill-btn" class="btn secondary" type="button">Redeem</button>
                     </div>
                 </div>
@@ -250,9 +250,8 @@ const AIQuizGenerator = (() => {
         }
 
         const remaining = Number(balance.credits_remaining || 0);
-        const total = Number(balance.credits_total || 0);
         const lowWarning = remaining <= 5 ? ` Only ${remaining} generations remaining.` : '';
-        creditStatusEl.textContent = `Generations remaining: ${remaining}${total ? ` of ${total}` : ''}.${lowWarning}`;
+        creditStatusEl.textContent = `Quiz Generations Remaining: ${remaining}.${lowWarning}`;
         creditStatusEl.style.display = '';
     }
 

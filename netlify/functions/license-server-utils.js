@@ -16,6 +16,7 @@ async function validateLicenseKeyServer(licenseKey) {
     data,
     valid: data?.valid === true,
     productId: Number(data?.meta?.product_id) || null,
+    variantId: Number(data?.meta?.variant_id) || null,
   };
 }
 

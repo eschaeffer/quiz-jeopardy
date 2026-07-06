@@ -1,5 +1,6 @@
 const { initializeCredits } = require('./supabase-credits');
 const { validateLicenseKeyServer, isDevLicenseKey } = require('./license-server-utils');
+const { upsertActivationRecord } = require('./supabase-activations');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -47,6 +48,19 @@ exports.handler = async (event) => {
       }
     } catch (error) {
       data.credit_balance_error = error.message;
+    }
+
+    if (data.instance?.id) {
+      try {
+        data.activation_record = await upsertActivationRecord({
+          licenseKey: license_key,
+          instanceId: data.instance.id,
+          instanceName: instance_name,
+          status: 'active',
+        });
+      } catch (error) {
+        data.activation_record_error = error.message;
+      }
     }
   }
 
