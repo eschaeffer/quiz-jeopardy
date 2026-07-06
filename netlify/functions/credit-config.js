@@ -8,6 +8,7 @@ const CREDIT_TIERS = {
 };
 
 const DEV_KEY = 'TEST-TEST-TEST-TEST';
+const LOCAL_TEST_STANDARD_KEY = 'LOCAL-TEST-STANDARD';
 
 function getCreditTierByProductId(productId) {
   const normalizedId = Number(productId);
@@ -17,5 +18,6 @@ function getCreditTierByProductId(productId) {
 module.exports = {
   CREDIT_TIERS,
   DEV_KEY,
+  LOCAL_TEST_STANDARD_KEY,
   getCreditTierByProductId,
 };

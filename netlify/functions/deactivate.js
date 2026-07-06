@@ -1,4 +1,5 @@
 const { deactivateActivationRecord } = require('./supabase-activations');
+const { getLocalTestLicenseProfile } = require('./license-server-utils');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -29,15 +30,32 @@ exports.handler = async (event) => {
     };
   }
 
-  const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ license_key, instance_id }),
-  });
+  const localTestProfile = getLocalTestLicenseProfile(license_key, event);
 
-  const data = await response.json();
+  let responseStatus;
+  let data;
 
-  if (response.ok && data?.deactivated) {
+  if (localTestProfile) {
+    responseStatus = 200;
+    data = {
+      deactivated: true,
+      meta: {
+        product_id: localTestProfile.productId,
+        variant_id: localTestProfile.variantId,
+      },
+    };
+  } else {
+    const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ license_key, instance_id }),
+    });
+
+    responseStatus = response.status;
+    data = await response.json();
+  }
+
+  if (data?.deactivated) {
     try {
       data.activation_record = await deactivateActivationRecord({
         licenseKey: license_key,
@@ -49,7 +67,7 @@ exports.handler = async (event) => {
   }
 
   return {
-    statusCode: response.status,
+    statusCode: responseStatus,
     body: JSON.stringify(data),
   };
 };

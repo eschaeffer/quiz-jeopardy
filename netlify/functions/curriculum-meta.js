@@ -1,7 +1,7 @@
 const { getCurriculumMetadata, getCourses, getFocusAreas } = require('./curriculum');
 const curriculumData = require('./curriculum-data/ontario-expectations.json');
 
-const CURRICULUM_META_VERSION = '2026-07-05-mfm2p';
+const CURRICULUM_META_VERSION = '2026-07-06-snc1w';
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {

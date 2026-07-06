@@ -37,7 +37,7 @@ exports.handler = async (event) => {
 
     let balance = await getCreditBalance(license_key);
     if (!balance) {
-      const validated = await validateLicenseKeyServer(license_key);
+      const validated = await validateLicenseKeyServer(license_key, event);
       if (!validated.valid || !validated.productId) {
         return errorResponse(400, 'Could not initialize credits for this license key', 'INVALID_LICENSE', 'request_error');
       }

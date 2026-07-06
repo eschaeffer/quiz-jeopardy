@@ -6,6 +6,7 @@ const LicenseManager = (() => {
     const REVALIDATE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
     const LS_API_URL = 'https://api.lemonsqueezy.com/v1/licenses/validate';
     const DEV_KEY = 'TEST-TEST-TEST-TEST';
+    const LOCAL_TEST_STANDARD_KEY = 'LOCAL-TEST-STANDARD';
     const VALID_PRODUCT_IDS = ['1166862', '1166895', '1166899', '1166902'];
 
     let overlay = null;
@@ -17,6 +18,18 @@ const LicenseManager = (() => {
     let manageDevicesModal = null;
 
     let pendingKey = null;
+
+    function isLocalLicenseTestingAllowed() {
+        return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    }
+
+    function getLocalTestLicenseProfile(key) {
+        if (!isLocalLicenseTestingAllowed()) return null;
+        if (String(key || '').trim().toUpperCase() !== LOCAL_TEST_STANDARD_KEY) return null;
+        return {
+            productId: '1166895',
+        };
+    }
 
     function getManageableLicenseKey() {
         return localStorage.getItem(LICENSE_KEY) || pendingKey || inputEl?.value?.trim() || null;
@@ -49,6 +62,7 @@ const LicenseManager = (() => {
                 <div id="license-manage-link" style="display:none;">
                     <button class="license-retry" id="license-manage-btn">Manage Devices</button>
                 </div>
+                <div id="license-local-test-note" class="ai-modal-help" style="display:none; margin-top:0.75rem;"></div>
                 <a href="terms.html" class="license-terms-link">View License Terms</a>
             </div>
         `;
@@ -58,6 +72,11 @@ const LicenseManager = (() => {
         inputEl = overlay.querySelector('#license-input');
         spinnerEl = overlay.querySelector('#license-spinner');
         activateBtnEl = overlay.querySelector('#license-activate-btn');
+
+        if (isLocalLicenseTestingAllowed()) {
+            overlay.querySelector('#license-local-test-note').textContent = `Local test key: ${LOCAL_TEST_STANDARD_KEY}`;
+            overlay.querySelector('#license-local-test-note').style.display = 'block';
+        }
 
         activateBtnEl.addEventListener('click', () => validateAndActivate(inputEl.value.trim()));
         inputEl.addEventListener('keydown', (e) => {
@@ -263,6 +282,7 @@ const LicenseManager = (() => {
             pendingKey = key;
             showDeviceNameModal();
         } else {
+            touchCurrentActivation();
             hideOverlay();
         }
     }
@@ -324,6 +344,12 @@ const LicenseManager = (() => {
             localStorage.setItem(LICENSE_INSTANCE_ID, 'dev');
             localStorage.setItem(LICENSE_INSTANCE_NAME, 'Dev Device');
             hideOverlay();
+            return;
+        }
+
+        if (getLocalTestLicenseProfile(normalizedKey)) {
+            pendingKey = normalizedKey;
+            showDeviceNameModal();
             return;
         }
 
@@ -417,6 +443,14 @@ const LicenseManager = (() => {
     }
 
     async function callLicenseAPI(key) {
+        const localTestProfile = getLocalTestLicenseProfile(key);
+        if (localTestProfile) {
+            return {
+                valid: true,
+                error: null,
+            };
+        }
+
         const response = await fetch(LS_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

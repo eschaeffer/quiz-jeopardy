@@ -1,6 +1,6 @@
 const AIQuizGenerator = (() => {
     const $ = (sel) => document.querySelector(sel);
-    const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-5.4';
+    const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-5.4-mini';
     const DEV_OPENROUTER_MODELS = [
         { value: 'openai/gpt-5.4', label: 'OpenAI GPT-5.4' },
         { value: 'openai/gpt-5.4-mini', label: 'OpenAI GPT-5.4 Mini' },

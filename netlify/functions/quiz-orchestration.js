@@ -6,7 +6,7 @@ const { assembleQuizDraft } = require('./quiz-assembler');
 const { getCreditBalance, initializeCredits, decrementCredit } = require('./supabase-credits');
 const { validateLicenseKeyServer, isDevLicenseKey } = require('./license-server-utils');
 
-const DEFAULT_MODEL = 'openai/gpt-5.4';
+const DEFAULT_MODEL = 'openai/gpt-5.4-mini';
 const DEV_ALLOWED_MODELS = new Set([
   'openai/gpt-5.4',
   'openai/gpt-5.4-mini',
@@ -111,7 +111,7 @@ function summarizeUsage(entries) {
   };
 }
 
-async function getOrInitializeCreditBalance(licenseKey) {
+async function getOrInitializeCreditBalance(licenseKey, event = null) {
   if (isDevLicenseKey(licenseKey)) {
     return {
       license_key: licenseKey,
@@ -126,7 +126,7 @@ async function getOrInitializeCreditBalance(licenseKey) {
   let balance = await getCreditBalance(licenseKey);
   if (balance) return balance;
 
-  const validated = await validateLicenseKeyServer(licenseKey);
+  const validated = await validateLicenseKeyServer(licenseKey, event);
   if (!validated.valid || !validated.productId) {
     throw createHandledError(400, 'Could not initialize credits for this license key', 'INVALID_LICENSE', 'request_error');
   }
@@ -207,7 +207,7 @@ async function resolveGenerationSetup({ event, payload, requestCategoryPlan }) {
   const allowDevModelSelection = isDevModelSelectionAllowed(event);
   const requestedModel = String(payload.model || '').trim() || DEFAULT_MODEL;
   const generationModel = resolveGenerationModel(payload.model, allowDevModelSelection);
-  const creditBalance = await getOrInitializeCreditBalance(payload.license_key);
+  const creditBalance = await getOrInitializeCreditBalance(payload.license_key, event);
   ensureCreditsAvailable(creditBalance);
   const curriculum = payload.curriculum || null;
   const focusAreaId = curriculum?.concept_id || curriculum?.conceptId || null;

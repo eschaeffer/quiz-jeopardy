@@ -1,6 +1,6 @@
 const { jsonResponse, errorResponse } = require('./quiz-generation-utils');
 const { deactivateActivationRecord } = require('./supabase-activations');
-const { isDevLicenseKey } = require('./license-server-utils');
+const { isDevLicenseKey, getLocalTestLicenseProfile } = require('./license-server-utils');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -28,22 +28,26 @@ exports.handler = async (event) => {
       return errorResponse(400, 'Dev key does not use remote deactivation', 'DEACTIVATE_NOT_SUPPORTED', 'request_error');
     }
 
-    const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ license_key, instance_id }),
-    });
-    const data = await response.json();
+    const localTestProfile = getLocalTestLicenseProfile(license_key, event);
 
-    if (!response.ok || !data?.deactivated) {
-      return {
-        statusCode: response.status,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      };
+    if (!localTestProfile) {
+      const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key, instance_id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data?.deactivated) {
+        return {
+          statusCode: response.status,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        };
+      }
     }
 
     const activation_record = await deactivateActivationRecord({
