@@ -61,8 +61,8 @@ async function requestCategoryVerification({ apiKey, model, topic, roundName, ca
   }
 }
 
-async function requestFinalVerification({ apiKey, model, topic, subjectFamily, curriculumPrompt, generatedFinal }) {
-  const prompt = buildFinalVerificationPrompt({ topic, subjectFamily, curriculumPrompt, generatedFinal });
+async function requestFinalVerification({ apiKey, model, topic, subjectFamily, curriculumPrompt, generatedFinal, boardSummary = '' }) {
+  const prompt = buildFinalVerificationPrompt({ topic, subjectFamily, curriculumPrompt, generatedFinal, boardSummary });
   let retried = false;
 
   while (true) {

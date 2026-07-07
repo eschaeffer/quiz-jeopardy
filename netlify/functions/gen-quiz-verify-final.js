@@ -33,6 +33,7 @@ exports.handler = async (event) => {
       subjectFamily: payload.subjectFamily,
       curriculumPrompt: payload.curriculumPrompt || '',
       generatedFinal: payload.generatedFinal,
+      boardSummary: payload.boardSummary || '',
     }));
   } catch (error) {
     return errorResponse(

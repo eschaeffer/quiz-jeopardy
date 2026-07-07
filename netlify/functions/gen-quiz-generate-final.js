@@ -32,6 +32,8 @@ exports.handler = async (event) => {
       topic: payload.topic,
       subjectFamily: payload.subjectFamily,
       curriculumPrompt: payload.curriculumPrompt || '',
+      categoryPlan: payload.categoryPlan || null,
+      generatedRounds: payload.generatedRounds || null,
     }));
   } catch (error) {
     return errorResponse(

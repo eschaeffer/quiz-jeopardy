@@ -2,6 +2,7 @@ const { requestCategoryPlan } = require('./quiz-category-planner');
 const { requestCategoryGeneration } = require('./quiz-category-generator');
 const { requestFinalGeneration } = require('./quiz-final-generator');
 const { requestCategoryVerification, requestFinalVerification } = require('./quiz-verifier');
+const { buildBoardSummary } = require('./quiz-quality');
 const { jsonResponse, errorResponse } = require('./quiz-generation-utils');
 const { parseJsonBody, resolveGenerationSetup, buildQuizFromStageResults, decrementCreditAfterSuccess, attachCreditBalanceToQuiz } = require('./quiz-orchestration');
 
@@ -44,19 +45,23 @@ exports.handler = async (event) => {
       questionsPerCategory: setup.questionsPerCategory,
       curriculumPrompt: setup.curriculumPrompt,
     }));
-    const finalRequest = requestFinalGeneration({
+    const [round1, round2] = await Promise.all([
+      Promise.all(round1Requests),
+      Promise.all(round2Requests),
+    ]);
+
+    const finalData = await requestFinalGeneration({
       apiKey: process.env.OPENROUTER_API_KEY,
       model: setup.resolved_model,
       topic: setup.topic,
       subjectFamily: setup.subjectFamily,
       curriculumPrompt: setup.curriculumPrompt,
+      categoryPlan: setup.categoryPlan,
+      generatedRounds: {
+        round1: { categories: round1 },
+        round2: { categories: round2 },
+      },
     });
-
-    const [round1, round2, finalData] = await Promise.all([
-      Promise.all(round1Requests),
-      Promise.all(round2Requests),
-      finalRequest,
-    ]);
 
     const round1VerificationRequests = round1.map((category) => requestCategoryVerification({
       apiKey: process.env.OPENROUTER_API_KEY,
@@ -85,6 +90,10 @@ exports.handler = async (event) => {
       subjectFamily: setup.subjectFamily,
       curriculumPrompt: setup.curriculumPrompt,
       generatedFinal: finalData,
+      boardSummary: buildBoardSummary([
+        { categories: round1 },
+        { categories: round2 },
+      ]),
     });
 
     const [round1Verification, round2Verification, finalVerification] = await Promise.all([

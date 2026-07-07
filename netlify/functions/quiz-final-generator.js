@@ -1,6 +1,7 @@
 const { createChatCompletion } = require('./quiz-openrouter');
 const { parseModelJsonContent, objectHasBrokenLegacyMathMarkers } = require('./quiz-generation-utils');
 const { buildFinalGenerationPrompt } = require('./quiz-prompt-utils');
+const { auditFinalGeneration, buildBoardSummary, getBlockingQualityIssues } = require('./quiz-quality');
 
 function normalizeFinalOption(option = {}) {
   return {
@@ -26,7 +27,7 @@ function validateFinalOption(option, label) {
   }
 }
 
-function validateFinalGenerationShape(parsed) {
+function validateFinalGenerationShape(parsed, boardSummaryText = '') {
   validateFinalOption(parsed?.activeFinal, 'Active final option');
   if (!Array.isArray(parsed?.bankFinals) || parsed.bankFinals.length !== 2) {
     throw new Error('Final generation must return exactly 2 bank final options');
@@ -35,14 +36,26 @@ function validateFinalGenerationShape(parsed) {
   if (objectHasBrokenLegacyMathMarkers(parsed)) {
     throw new Error('Final generation contains malformed legacy math markers');
   }
+  const qualityAudit = auditFinalGeneration(parsed, { boardSummaryText });
+  const blockingIssues = getBlockingQualityIssues(qualityAudit.issues);
+  if (blockingIssues.length > 0) {
+    throw new Error(`Final generation failed quality audit: ${blockingIssues.join('; ')}`);
+  }
 }
 
-async function requestFinalGeneration({ apiKey, model, topic, subjectFamily, curriculumPrompt }) {
-  const prompt = buildFinalGenerationPrompt({ topic, subjectFamily, curriculumPrompt });
-
+async function requestFinalGeneration({ apiKey, model, topic, subjectFamily, curriculumPrompt, categoryPlan = null, generatedRounds = null }) {
+  const boardSummaryText = generatedRounds ? buildBoardSummary([generatedRounds.round1 || {}, generatedRounds.round2 || {}]) : '';
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      const prompt = buildFinalGenerationPrompt({
+        topic,
+        subjectFamily,
+        curriculumPrompt,
+        categoryPlan,
+        boardSummary: boardSummaryText,
+        retryFeedback: attempt > 0 && lastError ? lastError.message : '',
+      });
       const response = await createChatCompletion({
         apiKey,
         model,
@@ -68,7 +81,7 @@ async function requestFinalGeneration({ apiKey, model, topic, subjectFamily, cur
 
       const content = jsonResponse?.choices?.[0]?.message?.content || '';
       const parsed = parseModelJsonContent(content);
-      validateFinalGenerationShape(parsed);
+      validateFinalGenerationShape(parsed, boardSummaryText);
 
       return {
         activeFinal: normalizeFinalOption(parsed.activeFinal),

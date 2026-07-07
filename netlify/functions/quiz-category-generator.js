@@ -1,6 +1,7 @@
 const { createChatCompletion } = require('./quiz-openrouter');
 const { parseModelJsonContent, objectHasBrokenLegacyMathMarkers } = require('./quiz-generation-utils');
 const { buildCategoryGenerationPrompt } = require('./quiz-prompt-utils');
+const { auditCategoryGeneration, getBlockingQualityIssues } = require('./quiz-quality');
 
 function normalizeQuestion(question = {}, fallbackSlot = 1) {
   return {
@@ -45,22 +46,32 @@ function validateGeneratedCategoryShape(parsed, expectedName, expectedCount) {
   if (objectHasBrokenLegacyMathMarkers(parsed)) {
     throw new Error(`Generated category for ${expectedName} contains malformed legacy math markers`);
   }
+  const qualityAudit = auditCategoryGeneration(parsed, expectedName);
+  const blockingIssues = getBlockingQualityIssues(qualityAudit.issues);
+  if (blockingIssues.length > 0) {
+    throw new Error(`Generated category for ${expectedName} failed quality audit: ${blockingIssues.join('; ')}`);
+  }
 }
 
 async function requestCategoryGeneration({ apiKey, model, topic, roundName, category, questionsPerCategory, curriculumPrompt }) {
-  const prompt = buildCategoryGenerationPrompt({
-    topic,
-    roundName,
-    categoryName: category.name,
-    questionsPerCategory,
-    subjectFamily: category.subjectFamily,
-    curriculumPrompt,
-    slotPlan: category.slotPlan,
-  });
-
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      const prompt = buildCategoryGenerationPrompt({
+        topic,
+        roundName,
+        categoryName: category.name,
+        questionsPerCategory,
+        subjectFamily: category.subjectFamily,
+        curriculumPrompt,
+        slotPlan: category.slotPlan,
+        categoryType: category.categoryType,
+        categoryAngle: category.angle,
+        preferredModes: category.preferredModes || [],
+        exampleSpace: category.exampleSpace || '',
+        avoidOverlapWith: category.avoidOverlapWith || [],
+        retryFeedback: attempt > 0 && lastError ? lastError.message : '',
+      });
       const response = await createChatCompletion({
         apiKey,
         model,

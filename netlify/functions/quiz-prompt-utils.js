@@ -60,6 +60,20 @@ Answer language:
 - Do not require formal phrasing when a simpler correct response demonstrates the intended understanding.`;
 }
 
+function buildTriviaQualityPromptBlock() {
+  return `
+
+Trivia quality rules:
+- Every clue must earn its place on the board. Do not generate filler.
+- Avoid near-duplicate clue ideas, not just near-duplicate wording.
+- Do not ask for the same answer repeatedly in slightly different ways.
+- Avoid reusing the same stock scenario unless the reasoning task is clearly different.
+- Prefer variety in how students think: identify, classify, compare, interpret, predict, explain cause and effect, spot an error, choose a better method, or apply in context.
+- Difficulty should come from the kind of thinking required, not from longer wording.
+- Keep clues quickly judgeable in live classroom play.
+- Final Showdown should feel more integrative or higher-impact than an ordinary board clue, not like a recycled easy clue.`;
+}
+
 function buildSubjectRulesPromptBlock(subjectFamily) {
   if (subjectFamily !== 'math') {
     return '';
@@ -104,7 +118,14 @@ function buildCategoryPlanPromptBlock(categoryPlan) {
   const formatRound = (roundName, categories) => {
     return (categories || []).map((category, index) => {
       const slotText = (category.slotPlan || []).map(slot => `slot ${slot.slot}: ${slot.difficulty}, ${slot.archetype}`).join('; ');
-      return `- ${roundName} category ${index + 1}: ${category.name}${slotText ? ` (${slotText})` : ''}`;
+      const metaParts = [
+        category.categoryType ? `type: ${category.categoryType}` : '',
+        category.angle ? `angle: ${category.angle}` : '',
+        Array.isArray(category.preferredModes) && category.preferredModes.length > 0 ? `preferred modes: ${category.preferredModes.join(', ')}` : '',
+        category.exampleSpace ? `example space: ${category.exampleSpace}` : '',
+        Array.isArray(category.avoidOverlapWith) && category.avoidOverlapWith.length > 0 ? `avoid overlap with: ${category.avoidOverlapWith.join(', ')}` : '',
+      ].filter(Boolean).join(' | ');
+      return `- ${roundName} category ${index + 1}: ${category.name}${slotText ? ` (${slotText})` : ''}${metaParts ? ` [${metaParts}]` : ''}`;
     }).join('\n');
   };
 
@@ -132,8 +153,9 @@ ${lines}` : '';
 function buildSinglePassQuizPrompt({ topic, categories, doubleQ, curriculumPrompt, categoryPlan }) {
   const categoryPlanPrompt = buildCategoryPlanPromptBlock(categoryPlan);
   const studentFriendlyLanguagePrompt = buildStudentFriendlyLanguagePromptBlock();
+  const triviaQualityPrompt = buildTriviaQualityPromptBlock();
   const mathFormattingPrompt = buildMathFormattingPromptBlock();
-  return `Generate a trivia quiz about "${topic}" with ${categories} categories and ${doubleQ} questions per category for EACH of two rounds. Round 1 and Round 2 must have completely different categories and different questions.${curriculumPrompt}${studentFriendlyLanguagePrompt}${categoryPlanPrompt}${mathFormattingPrompt}
+  return `Generate a trivia quiz about "${topic}" with ${categories} categories and ${doubleQ} questions per category for EACH of two rounds. Round 1 and Round 2 must have completely different categories and different questions.${curriculumPrompt}${studentFriendlyLanguagePrompt}${triviaQualityPrompt}${categoryPlanPrompt}${mathFormattingPrompt}
 
 For math expressions, use standard LaTeX inline delimiters: \(...\).
 In the JSON text you return, escape those backslashes correctly.
@@ -168,26 +190,38 @@ Return as JSON with this exact structure:
 Important: Generate exactly ${doubleQ} questions per category and exactly 3 Final Showdown options. Within each category, order the questions from easier/more straightforward to harder/more challenging so earlier questions fit lower board values and later questions fit higher board values. Round 1 must contain exactly 1 question with "isBonusQuestion": true. Round 2 must contain exactly 2 questions with "isBonusQuestion": true. The first Final Showdown option should match finalCategory/finalClue/finalAnswer for backward compatibility.`;
 }
 
-function buildCategoryGenerationPrompt({ topic, roundName, categoryName, questionsPerCategory, subjectFamily, curriculumPrompt, slotPlan }) {
+function buildCategoryGenerationPrompt({ topic, roundName, categoryName, questionsPerCategory, subjectFamily, curriculumPrompt, slotPlan, categoryType = '', categoryAngle = '', preferredModes = [], exampleSpace = '', avoidOverlapWith = [], retryFeedback = '' }) {
   const activeSlotBlock = buildSlotPlanPromptBlock(slotPlan, 'Active');
   const bankSlotBlock = buildSlotPlanPromptBlock(slotPlan, 'Bank');
   const subjectRulesPrompt = buildSubjectRulesPromptBlock(subjectFamily);
   const studentFriendlyLanguagePrompt = buildStudentFriendlyLanguagePromptBlock();
+  const triviaQualityPrompt = buildTriviaQualityPromptBlock();
   const mathFormattingPrompt = buildMathFormattingPromptBlock();
+  const categoryMetaBlock = [
+    categoryType ? `Category type: ${categoryType}` : '',
+    categoryAngle ? `Category angle: ${categoryAngle}` : '',
+    preferredModes.length > 0 ? `Preferred clue modes: ${preferredModes.join(', ')}` : '',
+    exampleSpace ? `Preferred example space: ${exampleSpace}` : '',
+    avoidOverlapWith.length > 0 ? `Avoid overlap with: ${avoidOverlapWith.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+  const retryBlock = retryFeedback ? `\n\nRetry guidance from the previous attempt:\n${retryFeedback}` : '';
 
   return `Generate one trivia category for a classroom review game.
 
 Overall topic: "${topic}"
 Round: ${roundName}
 Category name: "${categoryName}"
-Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${subjectRulesPrompt}${activeSlotBlock}${bankSlotBlock}${mathFormattingPrompt}
+Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${triviaQualityPrompt}${subjectRulesPrompt}${categoryMetaBlock ? `\n\n${categoryMetaBlock}` : ''}${activeSlotBlock}${bankSlotBlock}${mathFormattingPrompt}${retryBlock}
 
 Requirements:
 - Return valid JSON only, no markdown and no code fences.
 - Generate exactly ${questionsPerCategory} active questions and exactly ${questionsPerCategory} bank questions.
 - Active questions should progress from easier to harder in slot order.
 - Each bank question should be an alternate for the matching active slot number, not just a generic extra question.
-- Avoid duplicate or near-duplicate wording across active and bank questions.
+- Avoid duplicate or near-duplicate wording and duplicate or near-duplicate clue ideas across active and bank questions.
+- Avoid repeated answer targets unless the clues are clearly differentiated and test different thinking.
+- Use a variety of clue modes across active questions, with at least 3 distinct thinking moves when the category size allows it.
+- If you use a familiar scenario, do not repeat that same scenario in a second clue unless the reasoning task is clearly different.
 - Include confidence for every question.
 - Set isBonusQuestion to false for every generated question; Bonus Question assignment is handled later.
 - For math expressions, use standard inline LaTeX delimiters \(...\).
@@ -206,19 +240,25 @@ Return this exact JSON shape:
 }`;
 }
 
-function buildFinalGenerationPrompt({ topic, subjectFamily, curriculumPrompt }) {
+function buildFinalGenerationPrompt({ topic, subjectFamily, curriculumPrompt, categoryPlan = null, boardSummary = '', retryFeedback = '' }) {
   const subjectRulesPrompt = buildSubjectRulesPromptBlock(subjectFamily);
   const studentFriendlyLanguagePrompt = buildStudentFriendlyLanguagePromptBlock();
+  const triviaQualityPrompt = buildTriviaQualityPromptBlock();
   const mathFormattingPrompt = buildMathFormattingPromptBlock();
+  const categoryPlanPrompt = buildCategoryPlanPromptBlock(categoryPlan);
+  const boardSummaryBlock = boardSummary ? `\n\nExisting board summary:\n${boardSummary}` : '';
+  const retryBlock = retryFeedback ? `\n\nRetry guidance from the previous attempt:\n${retryFeedback}` : '';
   return `Generate Final Showdown options for a classroom trivia review game.
 
 Overall topic: "${topic}"
-Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${subjectRulesPrompt}${mathFormattingPrompt}
+Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${triviaQualityPrompt}${subjectRulesPrompt}${categoryPlanPrompt}${boardSummaryBlock}${mathFormattingPrompt}${retryBlock}
 
 Requirements:
 - Return valid JSON only, no markdown and no code fences.
 - Generate exactly 1 active final option and exactly 2 bank final options.
 - Final clues should be high-impact but quickly judgeable in a classroom setting.
+- Do not repeat an ordinary board clue idea or easy board answer target.
+- The active final should feel more integrative, connective, or higher-impact than a regular clue.
 - Include confidence for every option.
 - For math expressions, use standard inline LaTeX delimiters \(...\).
 - Because you are returning JSON, escape backslashes correctly inside string values.
@@ -236,12 +276,13 @@ Return this exact JSON shape:
 function buildCategoryVerificationPrompt({ topic, roundName, categoryName, subjectFamily, curriculumPrompt, generatedCategory }) {
   const subjectRulesPrompt = buildSubjectRulesPromptBlock(subjectFamily);
   const studentFriendlyLanguagePrompt = buildStudentFriendlyLanguagePromptBlock();
+  const triviaQualityPrompt = buildTriviaQualityPromptBlock();
   return `Review one generated trivia category for a classroom review game.
 
 Overall topic: "${topic}"
 Round: ${roundName}
 Category name: "${categoryName}"
-Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${subjectRulesPrompt}
+Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${triviaQualityPrompt}${subjectRulesPrompt}
 
 The generated category is:
 ${JSON.stringify(generatedCategory, null, 2)}
@@ -250,6 +291,8 @@ Task:
 - Do not rewrite any question or answer.
 - Judge correctness, curriculum fit, trivia suitability, duplication, and difficulty fit.
 - For math topics, penalize multi-step computation, unstated assumptions, hard-to-judge correctness, and content beyond the intended course level.
+- Use specific issue labels when possible: near_duplicate_active, near_duplicate_bank, reused_stock_example, same_answer_target_repeated, difficulty_progression_flat, category_overlap.
+- Use status "fail" if the category has major redundancy or a flat clue set that should ideally be regenerated.
 - Return only confidence adjustments and issue notes.
 - Confidence adjustments must be 0 or negative numbers.
 
@@ -266,13 +309,15 @@ Return this exact JSON shape:
 }`;
 }
 
-function buildFinalVerificationPrompt({ topic, subjectFamily, curriculumPrompt, generatedFinal }) {
+function buildFinalVerificationPrompt({ topic, subjectFamily, curriculumPrompt, generatedFinal, boardSummary = '' }) {
   const subjectRulesPrompt = buildSubjectRulesPromptBlock(subjectFamily);
   const studentFriendlyLanguagePrompt = buildStudentFriendlyLanguagePromptBlock();
+  const triviaQualityPrompt = buildTriviaQualityPromptBlock();
+  const boardSummaryBlock = boardSummary ? `\n\nExisting board summary:\n${boardSummary}` : '';
   return `Review Final Showdown options for a classroom review game.
 
 Overall topic: "${topic}"
-Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${subjectRulesPrompt}
+Subject family: ${subjectFamily}.${curriculumPrompt}${studentFriendlyLanguagePrompt}${triviaQualityPrompt}${subjectRulesPrompt}${boardSummaryBlock}
 
 The generated final data is:
 ${JSON.stringify(generatedFinal, null, 2)}
@@ -280,6 +325,8 @@ ${JSON.stringify(generatedFinal, null, 2)}
 Task:
 - Do not rewrite any clue or answer.
 - Judge correctness, curriculum fit, trivia suitability, duplication, and whether the final is quickly judgeable in a classroom setting.
+- Use specific issue labels when possible: final_too_easy, final_repeats_board_fact.
+- Use status "fail" if the active final is too easy, too repetitive, or too close to an ordinary board clue.
 - Return only confidence adjustments and issue notes.
 - Confidence adjustments must be 0 or negative numbers.
 
@@ -297,6 +344,7 @@ Return this exact JSON shape:
 module.exports = {
   buildCurriculumPrompt,
   buildStudentFriendlyLanguagePromptBlock,
+  buildTriviaQualityPromptBlock,
   buildSubjectRulesPromptBlock,
   buildCategoryPlanPromptBlock,
   buildSinglePassQuizPrompt,

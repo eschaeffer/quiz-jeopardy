@@ -730,6 +730,16 @@ Platform: ${navigator.platform}`;
         });
     }
 
+    function buildBoardSummaryForVerification(round1, round2) {
+        return [round1, round2]
+            .flatMap((round = []) => round.flatMap((category = {}) =>
+                (category.activeQuestions || []).map((question, index) =>
+                    `${category.name} slot ${index + 1}: Q ${question.question} A ${question.answer}`
+                )
+            ))
+            .join(' | ');
+    }
+
     async function generateQuizStaged(payload) {
         setLoadingMessage('Planning categories...');
         const setup = await postJson('/.netlify/functions/gen-quiz-init', payload);
@@ -741,6 +751,11 @@ Platform: ${navigator.platform}`;
             topic: setup.topic,
             subjectFamily: setup.subjectFamily,
             curriculumPrompt: setup.curriculumPrompt,
+            categoryPlan: setup.categoryPlan,
+            generatedRounds: {
+                round1: { categories: round1 },
+                round2: { categories: round2 },
+            },
         });
         const round1Verification = await verifyRoundCategories('Round 1', round1, setup);
         const round2Verification = await verifyRoundCategories('Round 2', round2, setup);
@@ -751,6 +766,7 @@ Platform: ${navigator.platform}`;
             subjectFamily: setup.subjectFamily,
             curriculumPrompt: setup.curriculumPrompt,
             generatedFinal: finalData,
+            boardSummary: buildBoardSummaryForVerification(round1, round2),
         });
         setLoadingMessage('Assembling quiz...');
         return postJson('/.netlify/functions/gen-quiz-assemble', {

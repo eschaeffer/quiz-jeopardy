@@ -1,4 +1,5 @@
 const { convertMathDelimitersDeep, normalizeBonusQuestionsInQuiz } = require('./quiz-generation-utils');
+const { auditAssembledQuizBoard } = require('./quiz-quality');
 
 function applyConfidenceAdjustment(confidence, adjustment) {
   const base = Number(confidence) || 0.8;
@@ -80,6 +81,7 @@ function assembleQuizDraft({ categoryPlan, generatedRounds, finalData, curriculu
 
   const normalized = normalizeBonusQuestionsInQuiz(convertMathDelimitersDeep(assembled));
   normalized.hasMath = JSON.stringify(normalized).includes('\\(');
+  normalized.boardQuality = auditAssembledQuizBoard(normalized);
   return normalized;
 }
 
